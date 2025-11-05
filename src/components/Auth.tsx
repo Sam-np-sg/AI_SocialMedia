@@ -156,17 +156,6 @@ export function Auth() {
               setLoading(true);
               setError('');
               try {
-                fetch('https://danieljohnsgp.app.n8n.cloud/webhook-test/google-signup', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    timestamp: new Date().toISOString(),
-                    action: 'google_signin_attempt',
-                  }),
-                }).catch((err) => console.error('Webhook error:', err));
-
                 const { error } = await signInWithGoogle();
                 if (error) throw error;
               } catch (err: any) {
