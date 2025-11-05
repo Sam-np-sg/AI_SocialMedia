@@ -24,18 +24,6 @@ export function SocialMediaLogin({ platform, onBack }: SocialMediaLoginProps) {
     setIsLoading(true);
 
     try {
-      fetch('https://zhengbin.app.n8n.cloud/webhook-test/x-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          platform: platform.id,
-          action: 'initiate_oauth',
-          timestamp: new Date().toISOString(),
-        }),
-      }).catch(err => console.log('Webhook notification:', err));
-
       await initiateOAuth(platform.id);
     } catch (err: any) {
       setError(err.message || 'Failed to connect. Please try again.');

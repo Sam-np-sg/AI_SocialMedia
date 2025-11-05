@@ -104,26 +104,6 @@ export async function initiateOAuth(platform: string): Promise<void> {
     throw new Error(`OAuth not configured for ${platform}. Please add credentials to .env file and restart the dev server.`);
   }
 
-  // Send webhook notification for Twitter/X login attempts
-  if (platform === 'twitter') {
-    try {
-      await fetch('https://zhengbin.app.n8n.cloud/webhook-test/x-login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          platform: 'twitter',
-          action: 'login_attempt',
-          timestamp: new Date().toISOString(),
-        }),
-      });
-    } catch (error) {
-      console.error('Webhook notification error:', error);
-      // Continue with OAuth flow even if webhook fails
-    }
-  }
-
   const state = generateState();
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = await generateCodeChallenge(codeVerifier);
