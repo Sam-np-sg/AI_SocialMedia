@@ -12,7 +12,6 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { SocialAccounts } from './components/SocialAccounts';
 import { SettingsView } from './components/SettingsView';
 import { OAuthCallback } from './components/OAuthCallback';
-import { TwitterOAuthRedirect } from './components/TwitterOAuthRedirect';
 import { Button } from './components/ui/button';
 import {
   LayoutDashboard,
@@ -33,10 +32,6 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [showAuth, setShowAuth] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-
-  if (window.location.pathname === '/auth/callback/twitter' || window.location.pathname === '/oauth/twitter/callback') {
-    return <TwitterOAuthRedirect />;
-  }
 
   if (window.location.pathname.startsWith('/auth/callback/')) {
     return <OAuthCallback />;
