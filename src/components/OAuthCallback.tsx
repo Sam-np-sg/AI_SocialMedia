@@ -51,17 +51,45 @@ export function OAuthCallback() {
 
       let { data: { session } } = await supabase.auth.getSession();
 
+      console.log('Session check:', {
+        hasSession: !!session,
+        userId: session?.user?.id,
+        platform
+      });
+
       if (!session) {
         const savedSession = localStorage.getItem(`oauth_supabase_session_${platform}`);
+        console.log('Looking for saved session:', {
+          hasSavedSession: !!savedSession,
+          savedSessionPreview: savedSession?.substring(0, 50)
+        });
+
         if (savedSession) {
-          const { data, error: setSessionError } = await supabase.auth.setSession(JSON.parse(savedSession));
-          if (!setSessionError && data.session) {
-            session = data.session;
+          try {
+            const parsedSession = JSON.parse(savedSession);
+            console.log('Parsed session:', {
+              hasAccessToken: !!parsedSession.access_token,
+              hasRefreshToken: !!parsedSession.refresh_token
+            });
+
+            const { data, error: setSessionError } = await supabase.auth.setSession(parsedSession);
+
+            console.log('Set session result:', {
+              success: !!data.session,
+              error: setSessionError?.message
+            });
+
+            if (!setSessionError && data.session) {
+              session = data.session;
+            }
+          } catch (parseError) {
+            console.error('Failed to parse saved session:', parseError);
           }
         }
       }
 
       if (!session?.user) {
+        console.error('No session available after restore attempt');
         throw new Error('You are not logged in. Please log in first and try connecting your Twitter account again.');
       }
 

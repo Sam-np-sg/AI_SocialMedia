@@ -112,7 +112,14 @@ export async function initiateOAuth(platform: string, supabaseSession?: string):
   sessionStorage.setItem(`oauth_verifier_${platform}`, codeVerifier);
 
   if (supabaseSession) {
+    console.log('Saving Supabase session to localStorage:', {
+      platform,
+      hasSession: !!supabaseSession,
+      sessionLength: supabaseSession.length
+    });
     localStorage.setItem(`oauth_supabase_session_${platform}`, supabaseSession);
+  } else {
+    console.warn('No Supabase session to save for platform:', platform);
   }
 
   const params = new URLSearchParams({
