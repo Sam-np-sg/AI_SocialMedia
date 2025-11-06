@@ -61,27 +61,10 @@ export function AICreator() {
 
     setSaving(true);
     try {
-      // Get the first connected social account for the selected platform
-      const platform = selectedPlatforms[0];
-      const { data: accountData } = await supabase
-        .from('social_accounts')
-        .select('id')
-        .eq('user_id', user!.id)
-        .eq('platform', platform)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (!accountData) {
-        alert(`Please connect your ${platform} account first`);
-        setSaving(false);
-        return;
-      }
-
-      const { error } = await supabase.from('posts').insert({
+      const { error } = await supabase.from('content_posts').insert({
         user_id: user!.id,
-        social_account_id: accountData.id,
         content: generatedContent,
-        platform: platform,
+        platforms: selectedPlatforms,
         status: 'draft',
       });
 
