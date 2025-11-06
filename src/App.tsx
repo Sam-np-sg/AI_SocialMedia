@@ -29,7 +29,7 @@ type View = 'dashboard' | 'ai-creator' | 'content' | 'scheduler' | 'analytics' |
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
-  const [currentView, setCurrentView] = useState<View>('dashboard'); // default tab = dashboard
+  const [currentView, setCurrentView] = useState<View>('dashboard');
   const [showAuth, setShowAuth] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -53,6 +53,8 @@ function AppContent() {
     }
   };
 
+  console.log('AppContent render:', { user: user?.email, loading });
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -62,7 +64,9 @@ function AppContent() {
   }
 
   if (!user) {
-    if (showAuth) return <Auth />;
+    if (showAuth) {
+      return <Auth />;
+    }
     return <HomePage onGetStarted={() => setShowAuth(true)} />;
   }
 
@@ -80,27 +84,23 @@ function AppContent() {
     { id: 'dashboard' as View, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'ai-creator' as View, label: 'AI Creator', icon: Sparkles },
     { id: 'content' as View, label: 'Content', icon: FileText },
-    { id: 'scheduler' as View, label: 'Workspace', icon: Calendar },
+    { id: 'scheduler' as View, label: 'Scheduler', icon: Calendar },
     { id: 'analytics' as View, label: 'Analytics', icon: BarChart3 },
     { id: 'social' as View, label: 'Social Accounts', icon: Share2 },
     { id: 'settings' as View, label: 'Settings', icon: SettingsIcon },
   ];
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] dark:bg-gray-900 flex transition-colors duration-500 ease-in-out">
-      <aside className="w-64 bg-white dark:bg-gray-800 border-r border-primary-200 dark:border-gray-700 flex flex-col transition-all duration-500 ease-in-out shadow-xl">
-        <div className="p-6 border-b border-primary-100 dark:border-gray-700 transition-colors duration-500 bg-gradient-to-br from-primary-50 to-pink-50 dark:from-gray-800 dark:to-gray-800">
-          <div className="flex items-center gap-3 animate-fadeIn">
-            <div className="bg-gradient-to-br from-primary-600 to-pink-500 p-2 rounded-lg transition-all duration-300 hover:scale-110 hover:rotate-12 shadow-lg shadow-primary-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex">
+      <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-2 rounded-lg">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-pink-600 bg-clip-text text-transparent transition-colors duration-500">
-                Social AI
-              </h1>
-              <p className="text-xs text-gray-600 dark:text-gray-400 transition-colors duration-500">
-                Automation Suite
-              </p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Social AI</h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Automation Suite</p>
             </div>
           </div>
         </div>
@@ -113,30 +113,23 @@ function AppContent() {
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.02] group ${
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-gradient-to-r from-primary-50 to-pink-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-medium shadow-md shadow-primary-100 border-l-4 border-primary-500'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-primary-50/50 dark:hover:bg-gray-700 hover:translate-x-1 hover:text-primary-600 dark:hover:text-primary-400'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
               >
-                <Icon
-                  className={`w-5 h-5 transition-all duration-300 ${
-                    isActive ? 'text-primary-600 dark:text-primary-400' : 'group-hover:text-primary-600 dark:group-hover:text-primary-400'
-                  }`}
-                />
-                <span className="transition-all duration-300">{item.label}</span>
+                <Icon className="w-5 h-5" />
+                <span>{item.label}</span>
               </button>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
-          <div className="flex justify-start pl-2">
-            <NotificationBell />
-          </div>
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700">
           <Button
             variant="ghost"
-            className="w-full justify-start dark:text-gray-300 dark:hover:bg-gray-700 hover:text-primary-600"
+            className="w-full justify-start dark:text-gray-300 dark:hover:bg-gray-700"
             onClick={() => signOut()}
           >
             <LogOut className="w-5 h-5 mr-3" />
@@ -145,16 +138,14 @@ function AppContent() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto bg-[#F9FAFB] dark:bg-gray-900">
-        <div className="animate-fadeInUp">
-          {currentView === 'dashboard' && <DashboardView />}
-          {currentView === 'ai-creator' && <AICreator />}
-          {currentView === 'content' && <ContentLibrary />}
-          {currentView === 'scheduler' && <SchedulerView />}
-          {currentView === 'analytics' && <AnalyticsView />}
-          {currentView === 'social' && <SocialAccounts />}
-          {currentView === 'settings' && <SettingsView />}
-        </div>
+      <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
+        {currentView === 'dashboard' && <DashboardView />}
+        {currentView === 'ai-creator' && <AICreator />}
+        {currentView === 'content' && <ContentLibrary />}
+        {currentView === 'scheduler' && <SchedulerView />}
+        {currentView === 'analytics' && <AnalyticsView />}
+        {currentView === 'social' && <SocialAccounts />}
+        {currentView === 'settings' && <SettingsView />}
       </main>
     </div>
   );
