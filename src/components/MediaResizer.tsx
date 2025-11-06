@@ -72,26 +72,42 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
   const handleResize = async () => {
     if (!selectedFile) return;
 
+    console.log('=== Starting resize process ===');
+    console.log('File:', selectedFile.name, selectedFile.type, selectedFile.size);
+    console.log('Target media type:', selectedMediaType);
+
     setProcessing(true);
 
     try {
       let resizeResult: ResizeResult;
 
       if (selectedFile.type.startsWith('image/')) {
+        console.log('Processing as image...');
         resizeResult = await resizeImage(selectedFile, selectedMediaType);
+        console.log('Resize complete, result:', {
+          size: resizeResult.size,
+          width: resizeResult.width,
+          height: resizeResult.height,
+          urlType: resizeResult.url.startsWith('data:') ? 'data URL' : 'blob URL',
+          urlLength: resizeResult.url.length
+        });
       } else if (selectedFile.type.startsWith('video/')) {
+        console.log('Processing as video...');
         resizeResult = await resizeVideo(selectedFile, selectedMediaType);
       } else {
         throw new Error('Unsupported file type');
       }
 
+      console.log('Setting result in state...');
       setResult(resizeResult);
+      console.log('Result set successfully');
 
       if (onMediaProcessed) {
         onMediaProcessed(resizeResult, selectedMediaType);
       }
     } catch (error: any) {
-      console.error('Error resizing media:', error);
+      console.error('❌ Error resizing media:', error);
+      console.error('Error stack:', error.stack);
       alert(error.message || 'Failed to resize media');
     } finally {
       setProcessing(false);
@@ -104,14 +120,16 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
     const link = document.createElement('a');
     link.href = result.url;
     link.download = `resized-${selectedMediaType}-${Date.now()}.jpg`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
   const handleReset = () => {
-    if (preview) {
+    if (preview && preview.startsWith('blob:')) {
       URL.revokeObjectURL(preview);
     }
-    if (result) {
+    if (result && result.url.startsWith('blob:')) {
       URL.revokeObjectURL(result.url);
     }
     setSelectedFile(null);
