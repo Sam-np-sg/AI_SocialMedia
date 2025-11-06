@@ -162,50 +162,62 @@ export async function exchangeCodeForToken(
   localStorage.removeItem(`oauth_state_${platform}`);
   localStorage.removeItem(`oauth_verifier_${platform}`);
 
-  // Use edge function for Twitter OAuth to avoid CORS issues
-  if (platform === 'twitter') {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zzbiglgjbbjhtraiiddn.supabase.co';
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zzbiglgjbbjhtraiiddn.supabase.co';
 
-    const edgeFunctionUrl = `${supabaseUrl}/functions/v1/twitter-oauth-exchange?action=exchange`;
+  const edgeFunctionMap: Record<string, string> = {
+    twitter: 'twitter-oauth-exchange',
+    linkedin: 'linkedin-oauth-exchange',
+    instagram: 'instagram-oauth-exchange',
+    facebook: 'facebook-oauth-exchange',
+  };
 
-    console.log('Calling edge function:', edgeFunctionUrl);
-
-    const response = await fetch(edgeFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        code: code,
-        redirectUri: config.redirectUri,
-        codeVerifier: codeVerifier,
-        clientId: config.clientId,
-      }),
-    });
-
-    console.log('Edge function response status:', response.status);
-
-    const responseText = await response.text();
-    console.log('Edge function response:', responseText);
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      throw new Error(`Invalid JSON response from edge function: ${responseText.substring(0, 200)}`);
-    }
-
-    if (!response.ok) {
-      throw new Error(`Token exchange failed: ${JSON.stringify(data)}`);
-    }
-
-    sessionStorage.removeItem(`oauth_state_${platform}`);
-    sessionStorage.removeItem(`oauth_verifier_${platform}`);
-
-    return data;
+  const functionName = edgeFunctionMap[platform];
+  if (!functionName) {
+    throw new Error(`Platform ${platform} OAuth not yet implemented.`);
   }
 
-  throw new Error(`Platform ${platform} OAuth not yet implemented. Please use Twitter for now.`);
+  const edgeFunctionUrl = `${supabaseUrl}/functions/v1/${functionName}?action=exchange`;
+
+  console.log('Calling edge function:', edgeFunctionUrl);
+
+  const body: any = {
+    code: code,
+    redirectUri: config.redirectUri,
+    clientId: config.clientId,
+  };
+
+  if (platform === 'twitter') {
+    body.codeVerifier = codeVerifier;
+  }
+
+  const response = await fetch(edgeFunctionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  console.log('Edge function response status:', response.status);
+
+  const responseText = await response.text();
+  console.log('Edge function response:', responseText);
+
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (e) {
+    throw new Error(`Invalid JSON response from edge function: ${responseText.substring(0, 200)}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Token exchange failed: ${JSON.stringify(data)}`);
+  }
+
+  sessionStorage.removeItem(`oauth_state_${platform}`);
+  sessionStorage.removeItem(`oauth_verifier_${platform}`);
+
+  return data;
 }
 
 export async function refreshAccessToken(
@@ -218,38 +230,45 @@ export async function refreshAccessToken(
     throw new Error(`OAuth not configured for ${platform}`);
   }
 
-  // Use edge function for Twitter OAuth to avoid CORS issues
-  if (platform === 'twitter') {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zzbiglgjbbjhtraiiddn.supabase.co';
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zzbiglgjbbjhtraiiddn.supabase.co';
 
-    const edgeFunctionUrl = `${supabaseUrl}/functions/v1/twitter-oauth-exchange?action=refresh`;
+  const edgeFunctionMap: Record<string, string> = {
+    twitter: 'twitter-oauth-exchange',
+    linkedin: 'linkedin-oauth-exchange',
+    instagram: 'instagram-oauth-exchange',
+    facebook: 'facebook-oauth-exchange',
+  };
 
-    const response = await fetch(edgeFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        refreshToken: refreshToken,
-        clientId: config.clientId,
-      }),
-    });
-
-    const responseText = await response.text();
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      throw new Error(`Invalid JSON response from edge function: ${responseText.substring(0, 200)}`);
-    }
-
-    if (!response.ok) {
-      throw new Error(`Token refresh failed: ${JSON.stringify(data)}`);
-    }
-
-    return data;
+  const functionName = edgeFunctionMap[platform];
+  if (!functionName) {
+    throw new Error(`Platform ${platform} token refresh not yet implemented.`);
   }
 
-  throw new Error(`Platform ${platform} token refresh not yet implemented. Please use Twitter for now.`);
+  const edgeFunctionUrl = `${supabaseUrl}/functions/v1/${functionName}?action=refresh`;
+
+  const response = await fetch(edgeFunctionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      refreshToken: refreshToken,
+      clientId: config.clientId,
+    }),
+  });
+
+  const responseText = await response.text();
+
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch (e) {
+    throw new Error(`Invalid JSON response from edge function: ${responseText.substring(0, 200)}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`Token refresh failed: ${JSON.stringify(data)}`);
+  }
+
+  return data;
 }
