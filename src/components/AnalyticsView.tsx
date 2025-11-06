@@ -2,11 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, RefreshCw, Trash2 } from 'lucide-react';
-import { PerformanceGraph } from './PerformanceGraph';
-import { TrendingHashtags } from './TrendingHashtags';
-import { Button } from './ui/button';
-import { generateDemoAnalytics, clearDemoAnalytics } from '../utils/analyticsDemo';
+import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, Flame } from 'lucide-react';
 
 type Platform = 'all' | 'twitter' | 'linkedin' | 'instagram' | 'facebook';
 
@@ -15,8 +11,6 @@ export function AnalyticsView() {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('all');
-  const [generating, setGenerating] = useState(false);
-  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -27,11 +21,11 @@ export function AnalyticsView() {
   const loadAnalytics = async () => {
     try {
       const { data, error } = await supabase
-        .from('analytics')
-        .select('*, posts(content, platform, published_at)')
+        .from('analytics_data')
+        .select('*, content_posts(content, platforms)')
         .eq('user_id', user!.id)
-        .order('collected_at', { ascending: false })
-        .limit(30);
+        .order('recorded_at', { ascending: false })
+        .limit(10);
 
       if (error) throw error;
       setAnalytics(data || []);
@@ -42,45 +36,16 @@ export function AnalyticsView() {
     }
   };
 
-  const handleGenerateDemoData = async () => {
-    setGenerating(true);
-    try {
-      await generateDemoAnalytics(user!.id);
-      await loadAnalytics();
-      alert('Demo analytics data generated successfully!');
-    } catch (error: any) {
-      alert(error.message || 'Failed to generate demo data');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handleClearData = async () => {
-    if (!confirm('Are you sure you want to clear all analytics data? This cannot be undone.')) {
-      return;
-    }
-    setClearing(true);
-    try {
-      await clearDemoAnalytics(user!.id);
-      await loadAnalytics();
-      alert('All analytics data cleared successfully!');
-    } catch (error: any) {
-      alert(error.message || 'Failed to clear data');
-    } finally {
-      setClearing(false);
-    }
-  };
-
   const filteredAnalytics = selectedPlatform === 'all'
     ? analytics
     : analytics.filter(a => a.platform === selectedPlatform);
 
   const totalMetrics = filteredAnalytics.reduce(
     (acc, curr) => ({
-      likes: acc.likes + (curr.likes || 0),
-      comments: acc.comments + (curr.comments || 0),
-      shares: acc.shares + (curr.shares || 0),
-      views: acc.views + (curr.impressions || 0),
+      likes: acc.likes + curr.likes,
+      comments: acc.comments + curr.comments,
+      shares: acc.shares + curr.shares,
+      views: acc.views + curr.views,
     }),
     { likes: 0, comments: 0, shares: 0, views: 0 }
   );
@@ -103,49 +68,9 @@ export function AnalyticsView() {
 
   return (
     <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-600 mt-1">Track your social media performance</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={handleGenerateDemoData}
-            disabled={generating || clearing}
-            variant="outline"
-            size="sm"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Generate Demo Data
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={handleClearData}
-            disabled={generating || clearing}
-            variant="outline"
-            size="sm"
-          >
-            {clearing ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Clearing...
-              </>
-            ) : (
-              <>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Clear Data
-              </>
-            )}
-          </Button>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+        <p className="text-gray-600 mt-1">Track your social media performance</p>
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
@@ -235,72 +160,114 @@ export function AnalyticsView() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <PerformanceGraph data={filteredAnalytics} type="area" />
+          <Card>
+            <CardHeader>
+              <CardTitle>Post Performance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {filteredAnalytics.length === 0 ? (
+                <div className="text-center py-12">
+                  <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No analytics yet</h3>
+                  <p className="text-gray-600">
+                    {selectedPlatform === 'all'
+                      ? 'Publish posts to start tracking your performance'
+                      : `No data available for ${platforms.find(p => p.id === selectedPlatform)?.name}`}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredAnalytics.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded capitalize">
+                          {item.platform}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {new Date(item.recorded_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-4 text-center">
+                        <div>
+                          <p className="text-xs text-gray-600">Likes</p>
+                          <p className="text-lg font-semibold text-gray-900">{item.likes}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Comments</p>
+                          <p className="text-lg font-semibold text-gray-900">{item.comments}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Shares</p>
+                          <p className="text-lg font-semibold text-gray-900">{item.shares}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-600">Views</p>
+                          <p className="text-lg font-semibold text-gray-900">{item.views}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div>
-          <TrendingHashtags platform={selectedPlatform} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Post Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {filteredAnalytics.length === 0 ? (
-              <div className="text-center py-12">
-                <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No analytics yet</h3>
-                <p className="text-gray-600">
-                  {selectedPlatform === 'all'
-                    ? 'Publish posts to start tracking your performance'
-                    : `No data available for ${platforms.find(p => p.id === selectedPlatform)?.name}`}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredAnalytics.slice(0, 5).map((item) => (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Flame className="w-5 h-5 text-orange-500" />
+                Top 10 Trends
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topTrends.slice(0, 10).map((trend, index) => (
                   <div
-                    key={item.id}
-                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all"
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer group"
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded capitalize">
-                        {item.platform}
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="text-sm font-bold text-gray-400 w-6">
+                        #{index + 1}
                       </span>
-                      <span className="text-sm text-gray-500">
-                        {new Date(item.collected_at).toLocaleDateString()}
-                      </span>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-sm text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {trend.topic}
+                        </h4>
+                        <p className="text-xs text-gray-500">{trend.posts} posts</p>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-4 gap-4 text-center">
-                      <div>
-                        <p className="text-xs text-gray-600">Likes</p>
-                        <p className="text-lg font-semibold text-gray-900">{item.likes}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Comments</p>
-                        <p className="text-lg font-semibold text-gray-900">{item.comments}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Shares</p>
-                        <p className="text-lg font-semibold text-gray-900">{item.shares}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-600">Views</p>
-                        <p className="text-lg font-semibold text-gray-900">{item.impressions || 0}</p>
-                      </div>
+                    <div className="flex items-center gap-1 text-orange-600 text-xs font-medium">
+                      <TrendingUp className="w-3 h-3" />
+                      {trend.growth}
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
 }
+
+const topTrends = [
+  { topic: 'AIRevolution', posts: '125K', growth: '+45%' },
+  { topic: 'SustainableLiving', posts: '89K', growth: '+32%' },
+  { topic: 'TechInnovation', posts: '67K', growth: '+28%' },
+  { topic: 'WorkFromHome', posts: '54K', growth: '+22%' },
+  { topic: 'DigitalMarketing', posts: '43K', growth: '+18%' },
+  { topic: 'Entrepreneurship', posts: '38K', growth: '+15%' },
+  { topic: 'HealthAndWellness', posts: '35K', growth: '+12%' },
+  { topic: 'FintechInnovation', posts: '31K', growth: '+10%' },
+  { topic: 'CreatorEconomy', posts: '28K', growth: '+8%' },
+  { topic: 'ClimateAction', posts: '25K', growth: '+6%' },
+];
