@@ -159,11 +159,7 @@ export async function exchangeCodeForToken(
 
   // Use edge function for Twitter OAuth to avoid CORS issues
   if (platform === 'twitter') {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-
-    if (!supabaseUrl) {
-      throw new Error('VITE_SUPABASE_URL is not configured');
-    }
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zzbiglgjbbjhtraiiddn.supabase.co';
 
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/twitter-oauth-exchange?action=exchange`;
 
@@ -219,11 +215,7 @@ export async function refreshAccessToken(
 
   // Use edge function for Twitter OAuth to avoid CORS issues
   if (platform === 'twitter') {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-
-    if (!supabaseUrl) {
-      throw new Error('VITE_SUPABASE_URL is not configured');
-    }
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zzbiglgjbbjhtraiiddn.supabase.co';
 
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/twitter-oauth-exchange?action=refresh`;
 
