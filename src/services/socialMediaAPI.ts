@@ -436,3 +436,175 @@ export async function verifyUsername(platform: string, username: string): Promis
       };
   }
 }
+
+export interface SocialPost {
+  id: string;
+  platform: string;
+  postId: string;
+  content: string;
+  mediaUrl?: string;
+  mediaType?: string;
+  likesCount: number;
+  commentsCount: number;
+  sharesCount: number;
+  engagementRate: number;
+  postedAt: string;
+}
+
+async function fetchTwitterPosts(accountId: string): Promise<SocialPost[]> {
+  try {
+    const accessToken = await getValidToken(accountId, 'twitter');
+
+    const response = await fetch('https://api.twitter.com/2/tweets/search/recent?query=from:me&max_results=10&tweet.fields=created_at,public_metrics,attachments', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch Twitter posts');
+    }
+
+    const data = await response.json();
+
+    return (data.data || []).map((tweet: any) => ({
+      id: tweet.id,
+      platform: 'twitter',
+      postId: tweet.id,
+      content: tweet.text,
+      likesCount: tweet.public_metrics?.like_count || 0,
+      commentsCount: tweet.public_metrics?.reply_count || 0,
+      sharesCount: tweet.public_metrics?.retweet_count || 0,
+      engagementRate: calculateEngagement(tweet.public_metrics),
+      postedAt: tweet.created_at,
+    }));
+  } catch (error) {
+    console.error('Error fetching Twitter posts:', error);
+    return [];
+  }
+}
+
+async function fetchFacebookPosts(accountId: string, pageId: string): Promise<SocialPost[]> {
+  try {
+    const accessToken = await getValidToken(accountId, 'facebook');
+
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/${pageId}/posts?fields=id,message,created_time,attachments,likes.summary(true),comments.summary(true),shares&limit=10&access_token=${accessToken}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch Facebook posts');
+    }
+
+    const data = await response.json();
+
+    return (data.data || []).map((post: any) => ({
+      id: post.id,
+      platform: 'facebook',
+      postId: post.id,
+      content: post.message || '',
+      mediaUrl: post.attachments?.data?.[0]?.media?.image?.src,
+      mediaType: post.attachments?.data?.[0]?.type,
+      likesCount: post.likes?.summary?.total_count || 0,
+      commentsCount: post.comments?.summary?.total_count || 0,
+      sharesCount: post.shares?.count || 0,
+      engagementRate: 0,
+      postedAt: post.created_time,
+    }));
+  } catch (error) {
+    console.error('Error fetching Facebook posts:', error);
+    return [];
+  }
+}
+
+async function fetchInstagramPosts(accountId: string, igAccountId: string): Promise<SocialPost[]> {
+  try {
+    const accessToken = await getValidToken(accountId, 'instagram');
+
+    const response = await fetch(
+      `https://graph.instagram.com/v18.0/${igAccountId}/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count&limit=10&access_token=${accessToken}`
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch Instagram posts');
+    }
+
+    const data = await response.json();
+
+    return (data.data || []).map((post: any) => ({
+      id: post.id,
+      platform: 'instagram',
+      postId: post.id,
+      content: post.caption || '',
+      mediaUrl: post.media_type === 'VIDEO' ? post.thumbnail_url : post.media_url,
+      mediaType: post.media_type?.toLowerCase(),
+      likesCount: post.like_count || 0,
+      commentsCount: post.comments_count || 0,
+      sharesCount: 0,
+      engagementRate: 0,
+      postedAt: post.timestamp,
+    }));
+  } catch (error) {
+    console.error('Error fetching Instagram posts:', error);
+    return [];
+  }
+}
+
+function calculateEngagement(metrics: any): number {
+  if (!metrics) return 0;
+  const total = (metrics.like_count || 0) + (metrics.reply_count || 0) + (metrics.retweet_count || 0);
+  const impressions = metrics.impression_count || 1;
+  return (total / impressions) * 100;
+}
+
+export async function fetchUserPosts(userId: string): Promise<void> {
+  try {
+    const { data: accounts, error } = await supabase
+      .from('social_accounts')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error || !accounts) {
+      console.error('Error fetching accounts:', error);
+      return;
+    }
+
+    for (const account of accounts) {
+      let posts: SocialPost[] = [];
+
+      switch (account.platform) {
+        case 'twitter':
+          posts = await fetchTwitterPosts(account.id);
+          break;
+        case 'facebook':
+          posts = await fetchFacebookPosts(account.id, account.account_handle);
+          break;
+        case 'instagram':
+          posts = await fetchInstagramPosts(account.id, account.account_handle);
+          break;
+      }
+
+      for (const post of posts) {
+        await supabase.from('social_posts').upsert({
+          user_id: userId,
+          social_account_id: account.id,
+          platform: post.platform,
+          post_id: post.postId,
+          content: post.content,
+          media_url: post.mediaUrl,
+          media_type: post.mediaType,
+          likes_count: post.likesCount,
+          comments_count: post.commentsCount,
+          shares_count: post.sharesCount,
+          engagement_rate: post.engagementRate,
+          posted_at: post.postedAt,
+          fetched_at: new Date().toISOString(),
+        }, {
+          onConflict: 'platform,post_id'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error in fetchUserPosts:', error);
+  }
+}

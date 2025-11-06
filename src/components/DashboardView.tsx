@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchUserPosts } from '../services/socialMediaAPI';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import {
   TrendingUp,
@@ -58,7 +59,15 @@ export function DashboardView() {
 
   const loadDashboardData = async () => {
     try {
-      const [postsData, accountsData, analyticsData] = await Promise.all([
+      await fetchUserPosts(user!.id);
+
+      const [socialPostsData, postsData, accountsData, analyticsData] = await Promise.all([
+        supabase
+          .from('social_posts')
+          .select('*')
+          .eq('user_id', user!.id)
+          .order('posted_at', { ascending: false })
+          .limit(10),
         supabase
           .from('content_posts')
           .select('*')
@@ -85,14 +94,16 @@ export function DashboardView() {
             analyticsData.data.length
           : 0;
 
+      const totalPublishedPosts = (socialPostsData.data?.length || 0) + (postsData.data?.filter(p => p.status === 'published').length || 0);
+
       setStats({
-        totalPosts: postsData.data?.length || 0,
+        totalPosts: totalPublishedPosts,
         scheduledPosts: scheduledCount,
         connectedAccounts: accountsData.data?.length || 0,
         avgEngagement: avgEng,
       });
 
-      setRecentPosts(postsData.data?.slice(0, 5) || []);
+      setRecentPosts(socialPostsData.data || []);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -175,44 +186,32 @@ export function DashboardView() {
                   <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-600 dark:text-gray-400">No posts yet</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                    Create your first post using the AI Creator
+                    Connect your social accounts to see your posts here
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {recentPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="p-5 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                              post.status === 'published'
-                                ? 'bg-emerald-50 text-emerald-700 border border-success dark:bg-emerald-900/20 dark:text-emerald-400'
-                                : post.status === 'scheduled'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-400 dark:bg-blue-900/20 dark:text-blue-400'
-                                : 'bg-gray-50 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300'
-                            }`}
-                          >
-                            {post.status === 'scheduled' && <Clock className="w-3 h-3 inline mr-1" />}
-                            {post.status}
-                          </span>
-                          {post.platforms && post.platforms.length > 0 && (
-                            <div className="flex gap-1">
-                              {post.platforms.map((platform: string) => {
-                                const Icon = getPlatformIcon(platform);
-                                return (
-                                  <div key={platform} className={`${getPlatformColor(platform)} p-1 rounded`}>
-                                    <Icon className="w-3 h-3 text-white" />
-                                  </div>
-                                );
-                              })}
+                  {recentPosts.map((post) => {
+                    const PlatformIcon = getPlatformIcon(post.platform);
+                    const platformColor = getPlatformColor(post.platform);
+
+                    return (
+                      <div
+                        key={post.id}
+                        className="p-5 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className={`${platformColor} p-1.5 rounded`}>
+                              <PlatformIcon className="w-4 h-4 text-white" />
                             </div>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                              {post.platform}
+                            </span>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
+                              {new Date(post.posted_at).toLocaleDateString()}
+                            </span>
+                          </div>
                           <button
                             onClick={() => handleCopyContent(post.content, post.id)}
                             className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors relative group"
@@ -229,15 +228,33 @@ export function DashboardView() {
                               </span>
                             )}
                           </button>
-                          <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Edit">
-                            <Edit className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                          </button>
-                          <button className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Delete">
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </button>
                         </div>
-                      </div>
-                      <p className="text-sm text-gray-900 dark:text-gray-200 leading-relaxed mb-3">{post.content}</p>
+
+                        {post.media_url && (
+                          <div className="mb-3 rounded-lg overflow-hidden">
+                            <img
+                              src={post.media_url}
+                              alt="Post media"
+                              className="w-full h-48 object-cover"
+                            />
+                          </div>
+                        )}
+
+                        <p className="text-sm text-gray-900 dark:text-gray-200 leading-relaxed mb-3">{post.content}</p>
+
+                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center gap-1">
+                            <TrendingUp className="w-3 h-3" />
+                            {post.likes_count} likes
+                          </span>
+                          <span>{post.comments_count} comments</span>
+                          {post.shares_count > 0 && <span>{post.shares_count} shares</span>}
+                          {post.engagement_rate > 0 && (
+                            <span className="ml-auto font-medium text-green-600 dark:text-green-400">
+                              {post.engagement_rate.toFixed(1)}% engagement
+                            </span>
+                          )}
+                        </div>
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -249,8 +266,9 @@ export function DashboardView() {
                           </button>
                         )}
                       </div>
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
