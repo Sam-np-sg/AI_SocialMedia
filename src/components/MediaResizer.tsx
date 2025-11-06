@@ -41,6 +41,10 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+
     setSelectedFile(file);
     setResult(null);
 
@@ -53,7 +57,6 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
         const aspectRatio = img.width / img.height;
         const detectedType = detectMediaType(platform, aspectRatio);
         setSelectedMediaType(detectedType);
-        URL.revokeObjectURL(previewUrl);
       };
       img.src = previewUrl;
     } else if (file.type.startsWith('video/')) {
@@ -61,8 +64,6 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
       video.onloadedmetadata = () => {
         const aspectRatio = video.videoWidth / video.videoHeight;
         const detectedType = detectMediaType(platform, aspectRatio);
-        setSelectedMediaType(detectedType);
-        URL.revokeObjectURL(previewUrl);
       };
       video.src = previewUrl;
     }
@@ -107,6 +108,12 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
   };
 
   const handleReset = () => {
+    if (preview) {
+      URL.revokeObjectURL(preview);
+    }
+    if (result) {
+      URL.revokeObjectURL(result.url);
+    }
     setSelectedFile(null);
     setResult(null);
     setPreview(null);
@@ -214,16 +221,36 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
 
             {result && (
               <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <Label>Resized Preview</Label>
-                    <span className="flex items-center gap-1 text-green-600 text-sm font-medium">
-                      <Check className="w-4 h-4" />
-                      Processed
-                    </span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="mb-2 block">Original</Label>
+                    <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
+                      {isVideo ? (
+                        <video src={preview || ''} className="w-full h-48 object-contain bg-black" />
+                      ) : (
+                        <img src={preview || ''} alt="Original" className="w-full h-48 object-contain bg-black" />
+                      )}
+                    </div>
                   </div>
-                  <div className="border-2 border-green-300 rounded-lg overflow-hidden">
-                    <img src={result.url} alt="Resized" className="w-full max-h-64 object-contain bg-black" />
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label>Resized</Label>
+                      <span className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                        <Check className="w-3 h-3" />
+                        Done
+                      </span>
+                    </div>
+                    <div className="border-2 border-green-500 rounded-lg overflow-hidden">
+                      <img
+                        src={result.url}
+                        alt="Resized"
+                        className="w-full h-48 object-contain bg-black"
+                        onError={(e) => {
+                          console.error('Failed to load resized image');
+                          console.log('Result URL:', result.url);
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
