@@ -104,6 +104,7 @@ export const resizeImage = async (
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        console.log('Drawing image to canvas...');
         ctx.drawImage(
           img,
           sourceX,
@@ -115,34 +116,47 @@ export const resizeImage = async (
           canvas.width,
           canvas.height
         );
+        console.log('Image drawn successfully');
 
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error('Failed to create blob'));
-              return;
-            }
+        // Get data URL immediately after drawing (synchronous)
+        try {
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          console.log('✅ Data URL created, length:', dataUrl.length);
 
-            console.log('Blob created:', {
-              size: blob.size,
-              type: blob.type
-            });
+          // Verify it's a valid data URL
+          if (!dataUrl.startsWith('data:image')) {
+            throw new Error('Invalid data URL created');
+          }
 
-            const url = URL.createObjectURL(blob);
-            console.log('Object URL created:', url);
+          // Create blob for download
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Failed to create blob'));
+                return;
+              }
 
-            resolve({
-              blob,
-              url,
-              width: specs.width,
-              height: specs.height,
-              size: blob.size,
-              originalSize: file.size,
-            });
-          },
-          'image/jpeg',
-          quality
-        );
+              console.log('✅ Blob created:', {
+                size: blob.size,
+                type: blob.type
+              });
+
+              resolve({
+                blob,
+                url: dataUrl,
+                width: specs.width,
+                height: specs.height,
+                size: blob.size,
+                originalSize: file.size,
+              });
+            },
+            'image/jpeg',
+            quality
+          );
+        } catch (err) {
+          console.error('❌ Error creating data URL:', err);
+          reject(err);
+        }
       };
 
       img.onerror = () => {
