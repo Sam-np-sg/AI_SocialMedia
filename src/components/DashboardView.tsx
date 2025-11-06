@@ -43,7 +43,7 @@ export function DashboardView() {
     try {
       const [postsData, accountsData, analyticsData] = await Promise.all([
         supabase
-          .from('content_posts')
+          .from('posts')
           .select('*')
           .eq('user_id', user!.id)
           .order('created_at', { ascending: false }),
@@ -51,9 +51,9 @@ export function DashboardView() {
           .from('social_accounts')
           .select('*')
           .eq('user_id', user!.id)
-          .eq('is_connected', true),
+          .eq('is_active', true),
         supabase
-          .from('analytics_data')
+          .from('analytics')
           .select('engagement_rate')
           .eq('user_id', user!.id),
       ]);

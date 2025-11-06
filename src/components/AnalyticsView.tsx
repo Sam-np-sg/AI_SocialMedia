@@ -21,10 +21,10 @@ export function AnalyticsView() {
   const loadAnalytics = async () => {
     try {
       const { data, error } = await supabase
-        .from('analytics_data')
-        .select('*, content_posts(content, platforms)')
+        .from('analytics')
+        .select('*, posts(content, platform)')
         .eq('user_id', user!.id)
-        .order('recorded_at', { ascending: false })
+        .order('collected_at', { ascending: false })
         .limit(10);
 
       if (error) throw error;

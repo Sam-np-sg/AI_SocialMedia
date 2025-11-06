@@ -33,7 +33,7 @@ export function SchedulerView() {
   const loadScheduledPosts = async () => {
     try {
       const { data, error } = await supabase
-        .from('content_posts')
+        .from('posts')
         .select('*')
         .eq('user_id', user!.id)
         .eq('status', 'scheduled')
@@ -97,10 +97,27 @@ export function SchedulerView() {
     setSaving(true);
 
     try {
-      const { error } = await supabase.from('content_posts').insert({
+      // Get the first connected social account for the selected platform
+      const platform = formData.platforms[0];
+      const { data: accountData } = await supabase
+        .from('social_accounts')
+        .select('id')
+        .eq('user_id', user!.id)
+        .eq('platform', platform)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!accountData) {
+        alert(`Please connect your ${platform} account first`);
+        setSaving(false);
+        return;
+      }
+
+      const { error } = await supabase.from('posts').insert({
         user_id: user!.id,
+        social_account_id: accountData.id,
         content: formData.content,
-        platforms: formData.platforms,
+        platform: platform,
         status: 'scheduled',
         scheduled_for: new Date(formData.scheduled_for).toISOString(),
         media_urls: formData.media_urls,

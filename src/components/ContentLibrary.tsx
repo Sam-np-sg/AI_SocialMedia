@@ -19,7 +19,7 @@ export function ContentLibrary() {
   const loadPosts = async () => {
     try {
       const { data, error } = await supabase
-        .from('content_posts')
+        .from('posts')
         .select('*')
         .eq('user_id', user!.id)
         .order('created_at', { ascending: false });
@@ -36,7 +36,7 @@ export function ContentLibrary() {
   const deletePost = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('content_posts')
+        .from('posts')
         .delete()
         .eq('id', id);
 
