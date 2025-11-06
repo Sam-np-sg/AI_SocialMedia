@@ -111,7 +111,7 @@ export function OAuthCallback() {
             platform,
             account_name: accountInfo.name,
             account_handle: accountInfo.handle,
-            is_connected: true,
+            is_active: true,
             access_token: tokenData.access_token,
             refresh_token: tokenData.refresh_token || null,
             token_expires_at: expiresAt,
