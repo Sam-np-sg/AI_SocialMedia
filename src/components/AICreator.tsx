@@ -12,7 +12,6 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { SocialAccounts } from './components/SocialAccounts';
 import { SettingsView } from './components/SettingsView';
 import { OAuthCallback } from './components/OAuthCallback';
-import { NotificationBell } from './components/NotificationBell';
 import { Button } from './components/ui/button';
 import {
   LayoutDashboard,
