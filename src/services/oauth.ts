@@ -160,7 +160,14 @@ export async function exchangeCodeForToken(
   // Use edge function for Twitter OAuth to avoid CORS issues
   if (platform === 'twitter') {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+    if (!supabaseUrl) {
+      throw new Error('VITE_SUPABASE_URL is not configured');
+    }
+
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/twitter-oauth-exchange?action=exchange`;
+
+    console.log('Calling edge function:', edgeFunctionUrl);
 
     const response = await fetch(edgeFunctionUrl, {
       method: 'POST',
@@ -175,12 +182,21 @@ export async function exchangeCodeForToken(
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Token exchange failed: ${JSON.stringify(errorData)}`);
+    console.log('Edge function response status:', response.status);
+
+    const responseText = await response.text();
+    console.log('Edge function response:', responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`Invalid JSON response from edge function: ${responseText.substring(0, 200)}`);
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`Token exchange failed: ${JSON.stringify(data)}`);
+    }
 
     sessionStorage.removeItem(`oauth_state_${platform}`);
     sessionStorage.removeItem(`oauth_verifier_${platform}`);
@@ -204,6 +220,11 @@ export async function refreshAccessToken(
   // Use edge function for Twitter OAuth to avoid CORS issues
   if (platform === 'twitter') {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+    if (!supabaseUrl) {
+      throw new Error('VITE_SUPABASE_URL is not configured');
+    }
+
     const edgeFunctionUrl = `${supabaseUrl}/functions/v1/twitter-oauth-exchange?action=refresh`;
 
     const response = await fetch(edgeFunctionUrl, {
@@ -217,12 +238,20 @@ export async function refreshAccessToken(
       }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Token refresh failed: ${JSON.stringify(errorData)}`);
+    const responseText = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`Invalid JSON response from edge function: ${responseText.substring(0, 200)}`);
     }
 
-    return await response.json();
+    if (!response.ok) {
+      throw new Error(`Token refresh failed: ${JSON.stringify(data)}`);
+    }
+
+    return data;
   }
 
   throw new Error(`Platform ${platform} token refresh not yet implemented. Please use Twitter for now.`);

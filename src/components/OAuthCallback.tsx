@@ -136,13 +136,8 @@ export function OAuthCallback() {
       setMessage(`Successfully connected your ${platform} account!`);
 
       setTimeout(() => {
-        if (window.opener) {
-          window.opener.postMessage({ type: 'oauth_success', platform }, window.location.origin);
-          window.close();
-        } else {
-          window.location.href = '/';
-        }
-      }, 2000);
+        window.location.href = '/';
+      }, 1500);
     } catch (error: any) {
       console.error('OAuth callback error:', error);
       setStatus('error');
