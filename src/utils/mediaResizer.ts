@@ -123,7 +123,13 @@ export const resizeImage = async (
               return;
             }
 
+            console.log('Blob created:', {
+              size: blob.size,
+              type: blob.type
+            });
+
             const url = URL.createObjectURL(blob);
+            console.log('Object URL created:', url);
 
             resolve({
               blob,

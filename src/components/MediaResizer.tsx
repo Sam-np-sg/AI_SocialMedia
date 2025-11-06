@@ -240,16 +240,24 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                         Done
                       </span>
                     </div>
-                    <div className="border-2 border-green-500 rounded-lg overflow-hidden">
+                    <div className="border-2 border-green-500 rounded-lg overflow-hidden bg-black">
                       <img
+                        key={result.url}
                         src={result.url}
                         alt="Resized"
-                        className="w-full h-48 object-contain bg-black"
+                        className="w-full h-48 object-contain"
+                        onLoad={() => {
+                          console.log('✅ Resized image loaded successfully!');
+                        }}
                         onError={(e) => {
-                          console.error('Failed to load resized image');
+                          console.error('❌ Failed to load resized image');
                           console.log('Result URL:', result.url);
+                          console.log('Blob size:', result.size);
                         }}
                       />
+                      <div className="p-1 text-xs text-gray-400 font-mono truncate bg-gray-900">
+                        URL: {result.url.substring(0, 40)}...
+                      </div>
                     </div>
                   </div>
                 </div>
