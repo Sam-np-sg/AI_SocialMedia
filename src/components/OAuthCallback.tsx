@@ -156,7 +156,8 @@ export function OAuthCallback() {
 
     switch (platform) {
       case 'twitter':
-        url = 'https://api.twitter.com/2/users/me';
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zzbiglgjbbjhtraiiddn.supabase.co';
+        url = `${supabaseUrl}/functions/v1/twitter-oauth-exchange?action=user-info`;
         break;
       case 'linkedin':
         url = 'https://api.linkedin.com/v2/me';
@@ -177,6 +178,8 @@ export function OAuthCallback() {
     const response = await fetch(url, { headers });
 
     if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Failed to fetch account info:', errorData);
       throw new Error(`Failed to fetch account info from ${platform}`);
     }
 

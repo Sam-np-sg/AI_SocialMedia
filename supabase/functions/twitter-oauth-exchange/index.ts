@@ -32,7 +32,55 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action') || 'exchange';
 
-    if (action === 'exchange') {
+    if (action === 'user-info') {
+      // Fetch Twitter user info
+      const authHeader = req.headers.get('Authorization');
+      
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: 'Missing authorization header' }),
+          {
+            status: 401,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      }
+
+      const response = await fetch('https://api.twitter.com/2/users/me', {
+        headers: {
+          'Authorization': authHeader,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return new Response(
+          JSON.stringify({ error: data }),
+          {
+            status: response.status,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify(data),
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    } else if (action === 'exchange') {
       // Exchange authorization code for tokens
       const body: TokenRequest = await req.json();
 
