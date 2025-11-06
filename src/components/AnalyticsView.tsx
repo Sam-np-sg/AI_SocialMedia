@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook } from 'lucide-react';
+import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, RefreshCw, Trash2 } from 'lucide-react';
 import { PerformanceGraph } from './PerformanceGraph';
 import { TrendingHashtags } from './TrendingHashtags';
+import { Button } from './ui/button';
+import { generateDemoAnalytics, clearDemoAnalytics } from '../utils/analyticsDemo';
 
 type Platform = 'all' | 'twitter' | 'linkedin' | 'instagram' | 'facebook';
 
@@ -13,6 +15,8 @@ export function AnalyticsView() {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('all');
+  const [generating, setGenerating] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -23,11 +27,11 @@ export function AnalyticsView() {
   const loadAnalytics = async () => {
     try {
       const { data, error } = await supabase
-        .from('analytics_data')
-        .select('*, content_posts(content, platforms)')
+        .from('analytics')
+        .select('*, posts(content, platform, published_at)')
         .eq('user_id', user!.id)
-        .order('recorded_at', { ascending: false })
-        .limit(10);
+        .order('collected_at', { ascending: false })
+        .limit(30);
 
       if (error) throw error;
       setAnalytics(data || []);
@@ -38,16 +42,45 @@ export function AnalyticsView() {
     }
   };
 
+  const handleGenerateDemoData = async () => {
+    setGenerating(true);
+    try {
+      await generateDemoAnalytics(user!.id);
+      await loadAnalytics();
+      alert('Demo analytics data generated successfully!');
+    } catch (error: any) {
+      alert(error.message || 'Failed to generate demo data');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleClearData = async () => {
+    if (!confirm('Are you sure you want to clear all analytics data? This cannot be undone.')) {
+      return;
+    }
+    setClearing(true);
+    try {
+      await clearDemoAnalytics(user!.id);
+      await loadAnalytics();
+      alert('All analytics data cleared successfully!');
+    } catch (error: any) {
+      alert(error.message || 'Failed to clear data');
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const filteredAnalytics = selectedPlatform === 'all'
     ? analytics
     : analytics.filter(a => a.platform === selectedPlatform);
 
   const totalMetrics = filteredAnalytics.reduce(
     (acc, curr) => ({
-      likes: acc.likes + curr.likes,
-      comments: acc.comments + curr.comments,
-      shares: acc.shares + curr.shares,
-      views: acc.views + curr.views,
+      likes: acc.likes + (curr.likes || 0),
+      comments: acc.comments + (curr.comments || 0),
+      shares: acc.shares + (curr.shares || 0),
+      views: acc.views + (curr.impressions || 0),
     }),
     { likes: 0, comments: 0, shares: 0, views: 0 }
   );
@@ -70,9 +103,49 @@ export function AnalyticsView() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-        <p className="text-gray-600 mt-1">Track your social media performance</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+          <p className="text-gray-600 mt-1">Track your social media performance</p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleGenerateDemoData}
+            disabled={generating || clearing}
+            variant="outline"
+            size="sm"
+          >
+            {generating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Generate Demo Data
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={handleClearData}
+            disabled={generating || clearing}
+            variant="outline"
+            size="sm"
+          >
+            {clearing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Clearing...
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear Data
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
@@ -200,7 +273,7 @@ export function AnalyticsView() {
                         {item.platform}
                       </span>
                       <span className="text-sm text-gray-500">
-                        {new Date(item.recorded_at).toLocaleDateString()}
+                        {new Date(item.collected_at).toLocaleDateString()}
                       </span>
                     </div>
                     <div className="grid grid-cols-4 gap-4 text-center">
@@ -218,7 +291,7 @@ export function AnalyticsView() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-600">Views</p>
-                        <p className="text-lg font-semibold text-gray-900">{item.views}</p>
+                        <p className="text-lg font-semibold text-gray-900">{item.impressions || 0}</p>
                       </div>
                     </div>
                   </div>

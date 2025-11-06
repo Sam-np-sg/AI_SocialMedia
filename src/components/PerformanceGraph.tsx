@@ -9,11 +9,11 @@ interface PerformanceGraphProps {
 
 export function PerformanceGraph({ data, type = 'area' }: PerformanceGraphProps) {
   const chartData = data.map(item => ({
-    date: new Date(item.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: new Date(item.collected_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     likes: item.likes || 0,
     comments: item.comments || 0,
     shares: item.shares || 0,
-    views: item.views || 0,
+    views: item.impressions || 0,
     engagement: item.engagement_rate || 0,
   })).reverse();
 
