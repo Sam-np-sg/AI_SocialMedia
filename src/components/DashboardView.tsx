@@ -155,32 +155,57 @@ export function DashboardView() {
   const generateDemoData = async () => {
     setGenerating(true);
     try {
-      const platforms = ['twitter', 'linkedin', 'instagram', 'facebook'];
-      const demoData = [];
+      const { data: socialAccounts } = await supabase
+        .from('social_accounts')
+        .select('id, platform')
+        .eq('user_id', user!.id)
+        .eq('is_active', true);
 
-      for (let i = 0; i < 30; i++) {
-        const platform = platforms[Math.floor(Math.random() * platforms.length)];
-        const date = new Date();
-        date.setDate(date.getDate() - i);
+      if (!socialAccounts || socialAccounts.length === 0) {
+        alert('Please connect at least one social account first');
+        setGenerating(false);
+        return;
+      }
 
-        demoData.push({
+      const { data: existingPosts } = await supabase
+        .from('posts')
+        .select('id, social_account_id, platform')
+        .eq('user_id', user!.id)
+        .eq('status', 'published')
+        .limit(30);
+
+      if (!existingPosts || existingPosts.length === 0) {
+        alert('No published posts found. Please create and publish some posts first.');
+        setGenerating(false);
+        return;
+      }
+
+      const { error: deleteError } = await supabase
+        .from('analytics')
+        .delete()
+        .eq('user_id', user!.id);
+
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw deleteError;
+      }
+
+      const demoData = existingPosts.map((post) => {
+        const socialAccount = socialAccounts.find(acc => acc.id === post.social_account_id);
+        return {
+          post_id: post.id,
           user_id: user!.id,
-          platform,
+          social_account_id: post.social_account_id,
+          platform: post.platform,
           likes: Math.floor(Math.random() * 500) + 50,
           comments: Math.floor(Math.random() * 100) + 10,
           shares: Math.floor(Math.random() * 50) + 5,
           impressions: Math.floor(Math.random() * 2000) + 500,
           clicks: Math.floor(Math.random() * 100) + 20,
           engagement_rate: parseFloat((Math.random() * 10 + 2).toFixed(2)),
-          collected_at: date.toISOString(),
-        });
-      }
-
-      const { error: deleteError } = await supabase.from('analytics').delete().eq('user_id', user!.id);
-      if (deleteError) {
-        console.error('Delete error:', deleteError);
-        throw deleteError;
-      }
+          collected_at: new Date().toISOString(),
+        };
+      });
 
       const { error: insertError } = await supabase.from('analytics').insert(demoData);
       if (insertError) {
@@ -189,6 +214,7 @@ export function DashboardView() {
       }
 
       await loadDashboardData();
+      alert(`Successfully generated analytics for ${demoData.length} posts!`);
     } catch (error) {
       console.error('Error generating demo data:', error);
       alert('Failed to generate demo data. Please check console for details.');
