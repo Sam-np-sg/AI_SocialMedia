@@ -84,15 +84,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) {
+      if (error && error.message !== 'Session from session_id claim in JWT does not exist') {
         console.error('Sign out error:', error);
-        throw error;
       }
+    } catch (error: any) {
+      if (error.message !== 'Auth session missing!' &&
+          error.message !== 'Session from session_id claim in JWT does not exist') {
+        console.error('Failed to sign out:', error);
+      }
+    } finally {
       setUser(null);
       setSession(null);
-    } catch (error) {
-      console.error('Failed to sign out:', error);
-      throw error;
+      localStorage.removeItem('supabase.auth.token');
     }
   };
 

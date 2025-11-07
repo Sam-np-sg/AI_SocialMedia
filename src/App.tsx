@@ -148,15 +148,9 @@ function AppContent() {
             variant="ghost"
             className="w-full justify-start dark:text-[#a39bba] dark:hover:bg-[#28243a] hover:text-primary-600 dark:hover:text-[#b8aaff] transition-all duration-300"
             onClick={async () => {
-              try {
-                setSigningOut(true);
-                await signOut();
-              } catch (error) {
-                console.error('Error signing out:', error);
-                alert('Failed to sign out. Please try again.');
-              } finally {
-                setSigningOut(false);
-              }
+              setSigningOut(true);
+              await signOut();
+              setSigningOut(false);
             }}
             disabled={signingOut}
           >
