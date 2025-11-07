@@ -155,29 +155,77 @@ export function DashboardView() {
   const generateDemoData = async () => {
     setGenerating(true);
     try {
-      const { data: socialAccounts } = await supabase
+      let { data: socialAccounts } = await supabase
         .from('social_accounts')
         .select('id, platform')
         .eq('user_id', user!.id)
         .eq('is_active', true);
 
       if (!socialAccounts || socialAccounts.length === 0) {
-        alert('Please connect at least one social account first');
-        setGenerating(false);
-        return;
+        const defaultAccounts = [
+          { platform: 'twitter', account_name: 'Demo Twitter', account_handle: '@demo_twitter' },
+          { platform: 'facebook', account_name: 'Demo Facebook', account_handle: 'demo.facebook' },
+          { platform: 'instagram', account_name: 'Demo Instagram', account_handle: '@demo_insta' },
+          { platform: 'linkedin', account_name: 'Demo LinkedIn', account_handle: 'demo-linkedin' },
+        ];
+
+        const { data: newAccounts } = await supabase
+          .from('social_accounts')
+          .insert(
+            defaultAccounts.map(acc => ({
+              user_id: user!.id,
+              ...acc,
+              is_active: true
+            }))
+          )
+          .select('id, platform');
+
+        socialAccounts = newAccounts || [];
       }
 
-      const { data: existingPosts } = await supabase
+      let { data: existingPosts } = await supabase
         .from('posts')
         .select('id, social_account_id, platform')
         .eq('user_id', user!.id)
-        .eq('status', 'published')
-        .limit(30);
+        .eq('status', 'published');
 
       if (!existingPosts || existingPosts.length === 0) {
-        alert('No published posts found. Please create and publish some posts first.');
-        setGenerating(false);
-        return;
+        const demoPostsData = [];
+        const postContents = [
+          'Just launched our new product! 🚀 Check it out. #ProductLaunch #Innovation',
+          'Behind the scenes of our creative process 🎨 #BehindTheScenes',
+          'Top 5 tips for growing your business in 2025 #BusinessTips',
+          'Customer success story: How we helped achieve 300% growth #Success',
+          'Excited to share our latest milestone! Thank you for your support 🎉',
+          'New blog post: The future of automation #ContentMarketing',
+          'Team spotlight: Meet our amazing developers 👥 #TeamCulture',
+          'Product update: New features you will love ⚡ #ProductUpdate',
+        ];
+
+        for (const account of socialAccounts) {
+          for (let i = 0; i < Math.min(4, postContents.length); i++) {
+            const daysAgo = Math.floor(Math.random() * 30) + 1;
+            const publishDate = new Date();
+            publishDate.setDate(publishDate.getDate() - daysAgo);
+
+            demoPostsData.push({
+              user_id: user!.id,
+              social_account_id: account.id,
+              platform: account.platform,
+              content: postContents[i % postContents.length],
+              status: 'published',
+              published_at: publishDate.toISOString(),
+              post_id_on_platform: `demo_${account.platform}_${i}_${Date.now()}`,
+            });
+          }
+        }
+
+        const { data: newPosts } = await supabase
+          .from('posts')
+          .insert(demoPostsData)
+          .select('id, social_account_id, platform');
+
+        existingPosts = newPosts || [];
       }
 
       const { error: deleteError } = await supabase
@@ -187,34 +235,43 @@ export function DashboardView() {
 
       if (deleteError) {
         console.error('Delete error:', deleteError);
-        throw deleteError;
       }
 
-      const demoData = existingPosts.map((post) => {
-        const socialAccount = socialAccounts.find(acc => acc.id === post.social_account_id);
+      const demoAnalytics = existingPosts.map((post) => {
+        const baseImpressions = Math.floor(Math.random() * 5000) + 1000;
+        const likes = Math.floor(baseImpressions * (Math.random() * 0.05 + 0.02));
+        const comments = Math.floor(likes * (Math.random() * 0.3 + 0.1));
+        const shares = Math.floor(likes * (Math.random() * 0.2 + 0.05));
+        const clicks = Math.floor(baseImpressions * (Math.random() * 0.03 + 0.01));
+        const totalEngagement = likes + comments + shares + clicks;
+        const engagementRate = (totalEngagement / baseImpressions) * 100;
+
         return {
           post_id: post.id,
           user_id: user!.id,
           social_account_id: post.social_account_id,
           platform: post.platform,
-          likes: Math.floor(Math.random() * 500) + 50,
-          comments: Math.floor(Math.random() * 100) + 10,
-          shares: Math.floor(Math.random() * 50) + 5,
-          impressions: Math.floor(Math.random() * 2000) + 500,
-          clicks: Math.floor(Math.random() * 100) + 20,
-          engagement_rate: parseFloat((Math.random() * 10 + 2).toFixed(2)),
+          impressions: baseImpressions,
+          likes,
+          comments,
+          shares,
+          clicks,
+          engagement_rate: parseFloat(engagementRate.toFixed(2)),
           collected_at: new Date().toISOString(),
         };
       });
 
-      const { error: insertError } = await supabase.from('analytics').insert(demoData);
+      const { error: insertError } = await supabase
+        .from('analytics')
+        .insert(demoAnalytics);
+
       if (insertError) {
         console.error('Insert error:', insertError);
         throw insertError;
       }
 
       await loadDashboardData();
-      alert(`Successfully generated analytics for ${demoData.length} posts!`);
+      alert(`Successfully generated demo data with ${demoAnalytics.length} analytics entries!`);
     } catch (error) {
       console.error('Error generating demo data:', error);
       alert('Failed to generate demo data. Please check console for details.');
