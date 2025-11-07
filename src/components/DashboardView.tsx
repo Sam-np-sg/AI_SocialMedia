@@ -96,7 +96,7 @@ export function DashboardView() {
           .from('social_accounts')
           .select('*')
           .eq('user_id', user!.id)
-          .eq('is_connected', true),
+          .eq('is_active', true),
         supabase
           .from('analytics')
           .select('engagement_rate')
