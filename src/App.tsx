@@ -34,6 +34,13 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [workspaceRefreshTrigger, setWorkspaceRefreshTrigger] = useState(0);
 
+  const handleViewChange = (view: View) => {
+    setCurrentView(view);
+    if (view === 'dashboard') {
+      window.dispatchEvent(new Event('refreshDashboard'));
+    }
+  };
+
   if (window.location.pathname.startsWith('/auth/callback/')) {
     return <OAuthCallback />;
   }
@@ -112,7 +119,7 @@ function AppContent() {
             return (
               <button
                 key={item.id}
-                onClick={() => setCurrentView(item.id)}
+                onClick={() => handleViewChange(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-[1.02] group relative ${
                   isActive
                     ? 'bg-[#3a3456] dark:bg-[#2f2b45] text-primary-700 dark:text-[#b8aaff] font-medium border-l-4 border-[#7b6cff]'

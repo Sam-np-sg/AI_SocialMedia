@@ -45,6 +45,18 @@ export function DashboardView() {
       loadDashboardData();
       window.dispatchEvent(new Event('refreshNotifications'));
     }
+
+    const handleRefresh = () => {
+      if (user) {
+        loadDashboardData();
+      }
+    };
+
+    window.addEventListener('refreshDashboard', handleRefresh);
+
+    return () => {
+      window.removeEventListener('refreshDashboard', handleRefresh);
+    };
   }, [user]);
 
   const handleCopyContent = async (content: string, postId: string) => {
@@ -80,7 +92,7 @@ export function DashboardView() {
           .eq('user_id', user!.id)
           .eq('is_connected', true),
         supabase
-          .from('analytics_data')
+          .from('analytics')
           .select('engagement_rate')
           .eq('user_id', user!.id),
       ]);
@@ -104,7 +116,22 @@ export function DashboardView() {
         avgEngagement: avgEng,
       });
 
-      setRecentPosts(socialPostsData.data || []);
+      const draftPosts = (postsData.data?.filter(p => p.status === 'draft').slice(0, 3) || []).map(post => ({
+        id: post.id,
+        platform: post.platforms?.[0] || 'draft',
+        content: post.content,
+        posted_at: post.created_at,
+        likes_count: 0,
+        comments_count: 0,
+        shares_count: 0,
+        engagement_rate: 0,
+        isDraft: true,
+        task_name: post.task_name,
+      }));
+
+      const allRecentPosts = [...draftPosts, ...(socialPostsData.data || [])].slice(0, 5);
+
+      setRecentPosts(allRecentPosts);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -199,19 +226,39 @@ export function DashboardView() {
                     return (
                       <div
                         key={post.id}
-                        className="p-5 border border-gray-200 dark:border-[#2a2538] rounded-xl hover:border-primary-300 dark:hover:border-[#3a3456] transition-all duration-300 bg-white dark:bg-[#1f1b2e]"
+                        className={`p-5 border rounded-xl hover:border-primary-300 dark:hover:border-[#3a3456] transition-all duration-300 ${
+                          post.isDraft
+                            ? 'border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/10'
+                            : 'border-gray-200 dark:border-[#2a2538] bg-white dark:bg-[#1f1b2e]'
+                        }`}
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            <div className={`${platformColor} p-1.5 rounded`}>
-                              <PlatformIcon className="w-4 h-4 text-white" />
-                            </div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                              {post.platform}
-                            </span>
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {new Date(post.posted_at).toLocaleDateString()}
-                            </span>
+                            {post.isDraft ? (
+                              <>
+                                <div className="bg-yellow-500 p-1.5 rounded flex items-center gap-1.5">
+                                  <Edit className="w-4 h-4 text-white" />
+                                </div>
+                                <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded">
+                                  Draft
+                                </span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  {new Date(post.posted_at).toLocaleDateString()}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <div className={`${platformColor} p-1.5 rounded`}>
+                                  <PlatformIcon className="w-4 h-4 text-white" />
+                                </div>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                                  {post.platform}
+                                </span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  {new Date(post.posted_at).toLocaleDateString()}
+                                </span>
+                              </>
+                            )}
                           </div>
                           <button
                             onClick={() => handleCopyContent(post.content, post.id)}
@@ -231,6 +278,14 @@ export function DashboardView() {
                           </button>
                         </div>
 
+                        {post.task_name && post.isDraft && (
+                          <div className="mb-2">
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                              {post.task_name}
+                            </span>
+                          </div>
+                        )}
+
                         {post.media_url && (
                           <div className="mb-3 rounded-lg overflow-hidden">
                             <img
@@ -243,19 +298,26 @@ export function DashboardView() {
 
                         <p className="text-sm text-gray-900 dark:text-[#b8aaff] leading-relaxed mb-3">{post.content}</p>
 
-                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                          <span className="flex items-center gap-1">
-                            <TrendingUp className="w-3 h-3" />
-                            {post.likes_count} likes
-                          </span>
-                          <span>{post.comments_count} comments</span>
-                          {post.shares_count > 0 && <span>{post.shares_count} shares</span>}
-                          {post.engagement_rate > 0 && (
-                            <span className="ml-auto font-medium text-green-600 dark:text-green-400">
-                              {post.engagement_rate.toFixed(1)}% engagement
+                        {post.isDraft ? (
+                          <div className="flex items-center gap-2 text-xs text-yellow-700 dark:text-yellow-300">
+                            <Clock className="w-3 h-3" />
+                            <span>Saved as draft - Edit in Workspace</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <TrendingUp className="w-3 h-3" />
+                              {post.likes_count} likes
                             </span>
-                          )}
-                        </div>
+                            <span>{post.comments_count} comments</span>
+                            {post.shares_count > 0 && <span>{post.shares_count} shares</span>}
+                            {post.engagement_rate > 0 && (
+                              <span className="ml-auto font-medium text-green-600 dark:text-green-400">
+                                {post.engagement_rate.toFixed(1)}% engagement
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
