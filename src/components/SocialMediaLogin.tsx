@@ -37,9 +37,28 @@ export function SocialMediaLogin({ platform, onBack }: SocialMediaLoginProps) {
         throw new Error('You must be logged in to connect social accounts');
       }
 
-      const sessionData = JSON.stringify(session);
-      console.log('About to initiate OAuth with session data length:', sessionData.length);
-      await initiateOAuth(platform.id, sessionData);
+      // Use Supabase native OAuth if Twitter is configured as auth provider
+      // Otherwise fall back to custom OAuth flow
+      if (platform.id === 'twitter' && import.meta.env.VITE_USE_SUPABASE_TWITTER_OAUTH === 'true') {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'twitter',
+          options: {
+            scopes: 'tweet.read tweet.write users.read offline.access',
+            redirectTo: `${window.location.origin}/auth/callback/twitter`
+          }
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        console.log('Supabase OAuth initiated:', data);
+      } else {
+        // Use custom OAuth flow for better control
+        const sessionData = JSON.stringify(session);
+        console.log('About to initiate OAuth with session data length:', sessionData.length);
+        await initiateOAuth(platform.id, sessionData);
+      }
     } catch (err: any) {
       console.error('Connect error:', err);
       setError(err.message || 'Failed to connect. Please try again.');
