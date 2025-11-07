@@ -139,51 +139,6 @@ export function Auth() {
             </Button>
           </form>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={async () => {
-              setError('');
-              try {
-                fetch('https://danieljohnsgp.app.n8n.cloud/webhook-test/google-signup', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    timestamp: new Date().toISOString(),
-                    action: 'google_signin_attempt',
-                  }),
-                }).catch((err) => console.error('Webhook error:', err));
-
-                console.log('Initiating Google OAuth...');
-                const { error } = await signInWithGoogle();
-                if (error) {
-                  console.error('Google OAuth error:', error);
-                  throw error;
-                }
-                console.log('Google OAuth redirect initiated successfully');
-              } catch (err: any) {
-                console.error('Google sign-in error:', err);
-                setError(err.message || 'Failed to sign in with Google');
-              }
-            }}
-            disabled={loading}
-          >
-            <GoogleIcon />
-            <span className="ml-2">Sign in with Google</span>
-          </Button>
-
           <div className="mt-4 text-center text-sm">
             <button
               type="button"
