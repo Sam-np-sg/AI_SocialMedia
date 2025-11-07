@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { PerformanceGraph } from './PerformanceGraph';
+import { TrendingHashtags } from './TrendingHashtags';
 import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, Flame } from 'lucide-react';
 
 type Platform = 'all' | 'twitter' | 'linkedin' | 'instagram' | 'facebook';
@@ -160,11 +162,22 @@ export function AnalyticsView() {
         </Card>
       </div>
 
+      <div className="mb-8">
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <CardTitle className="dark:text-white">Performance Trends</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PerformanceGraph />
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Card>
+          <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardHeader>
-              <CardTitle>Post Performance</CardTitle>
+              <CardTitle className="dark:text-white">Post Performance</CardTitle>
             </CardHeader>
             <CardContent>
               {filteredAnalytics.length === 0 ? (
@@ -219,55 +232,9 @@ export function AnalyticsView() {
         </div>
 
         <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-orange-500" />
-                Top 10 Trends
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {topTrends.slice(0, 10).map((trend, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
-                      <span className="text-sm font-bold text-gray-400 w-6">
-                        #{index + 1}
-                      </span>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-sm text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {trend.topic}
-                        </h4>
-                        <p className="text-xs text-gray-500">{trend.posts} posts</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 text-orange-600 text-xs font-medium">
-                      <TrendingUp className="w-3 h-3" />
-                      {trend.growth}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <TrendingHashtags />
         </div>
       </div>
     </div>
   );
 }
-
-const topTrends = [
-  { topic: 'AIRevolution', posts: '125K', growth: '+45%' },
-  { topic: 'SustainableLiving', posts: '89K', growth: '+32%' },
-  { topic: 'TechInnovation', posts: '67K', growth: '+28%' },
-  { topic: 'WorkFromHome', posts: '54K', growth: '+22%' },
-  { topic: 'DigitalMarketing', posts: '43K', growth: '+18%' },
-  { topic: 'Entrepreneurship', posts: '38K', growth: '+15%' },
-  { topic: 'HealthAndWellness', posts: '35K', growth: '+12%' },
-  { topic: 'FintechInnovation', posts: '31K', growth: '+10%' },
-  { topic: 'CreatorEconomy', posts: '28K', growth: '+8%' },
-  { topic: 'ClimateAction', posts: '25K', growth: '+6%' },
-];

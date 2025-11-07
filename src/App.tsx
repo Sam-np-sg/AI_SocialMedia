@@ -12,6 +12,7 @@ import { SocialAccounts } from './components/SocialAccounts';
 import { SettingsView } from './components/SettingsView';
 import { OAuthCallback } from './components/OAuthCallback';
 import { NotificationBell } from './components/NotificationBell';
+import { MediaResizerView } from './components/MediaResizerView';
 import { Button } from './components/ui/button';
 import {
   LayoutDashboard,
@@ -22,10 +23,11 @@ import {
   Share2,
   Settings as SettingsIcon,
   LogOut,
-  Loader2
+  Loader2,
+  Image
 } from 'lucide-react';
 
-type View = 'dashboard' | 'ai-creator' | 'content' | 'scheduler' | 'analytics' | 'social' | 'settings';
+type View = 'dashboard' | 'ai-creator' | 'content' | 'scheduler' | 'analytics' | 'social' | 'settings' | 'media-resizer';
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
@@ -93,6 +95,7 @@ function AppContent() {
     { id: 'ai-creator' as View, label: 'AI Creator', icon: Sparkles },
     { id: 'scheduler' as View, label: 'Workspace', icon: Calendar },
     { id: 'analytics' as View, label: 'Analytics', icon: BarChart3 },
+    { id: 'media-resizer' as View, label: 'Media Resizer', icon: Image },
     { id: 'social' as View, label: 'Social Accounts', icon: Share2 },
     { id: 'settings' as View, label: 'Settings', icon: SettingsIcon },
   ];
@@ -160,6 +163,7 @@ function AppContent() {
           }} />}
           {currentView === 'scheduler' && <SchedulerView refreshTrigger={workspaceRefreshTrigger} />}
           {currentView === 'analytics' && <AnalyticsView />}
+          {currentView === 'media-resizer' && <MediaResizerView />}
           {currentView === 'social' && <SocialAccounts />}
           {currentView === 'settings' && <SettingsView />}
         </div>

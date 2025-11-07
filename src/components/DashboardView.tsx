@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchUserPosts } from '../services/socialMediaAPI';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { PerformanceGraph } from './PerformanceGraph';
+import { TrendingHashtags } from './TrendingHashtags';
 import {
   TrendingUp,
   Calendar,
@@ -202,6 +204,17 @@ export function DashboardView() {
         })}
       </div>
 
+      <div className="mb-8">
+        <Card className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <CardTitle className="dark:text-white">Performance Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PerformanceGraph />
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card className="dark:bg-gray-800 dark:border-gray-700">
@@ -328,89 +341,12 @@ export function DashboardView() {
         </div>
 
         <div>
-          <Card className="dark:bg-gray-800 dark:border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 dark:text-white">
-                <Flame className="w-5 h-5 text-orange-500" />
-                Trending Now
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {trendingTopics.map((trend, index) => {
-                  const Icon = getPlatformIcon(trend.platform);
-                  return (
-                    <div
-                      key={index}
-                      className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all cursor-pointer group"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                          #{trend.topic}
-                        </h4>
-                        <div className={`${getPlatformColor(trend.platform)} p-1.5 rounded`}>
-                          <Icon className="w-3.5 h-3.5 text-white" />
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
-                        {trend.description}
-                      </p>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-500 dark:text-gray-400">{trend.posts} posts</span>
-                        <span className="text-orange-600 font-medium flex items-center gap-1">
-                          <TrendingUp className="w-3 h-3" />
-                          {trend.growth}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          <TrendingHashtags />
         </div>
       </div>
     </div>
   );
 }
-
-const trendingTopics = [
-  {
-    topic: 'AIRevolution',
-    platform: 'twitter',
-    description: 'Latest developments in artificial intelligence and machine learning',
-    posts: '125K',
-    growth: '+45%',
-  },
-  {
-    topic: 'SustainableLiving',
-    platform: 'instagram',
-    description: 'Eco-friendly lifestyle tips and sustainable product recommendations',
-    posts: '89K',
-    growth: '+32%',
-  },
-  {
-    topic: 'TechInnovation',
-    platform: 'linkedin',
-    description: 'Breakthrough technologies and industry innovations',
-    posts: '67K',
-    growth: '+28%',
-  },
-  {
-    topic: 'WorkFromHome',
-    platform: 'facebook',
-    description: 'Remote work tips, productivity hacks, and home office setups',
-    posts: '54K',
-    growth: '+22%',
-  },
-  {
-    topic: 'DigitalMarketing',
-    platform: 'twitter',
-    description: 'Latest trends in digital marketing and social media strategy',
-    posts: '43K',
-    growth: '+18%',
-  },
-];
 
 const getPlatformIcon = (platform: string) => {
   switch (platform) {
