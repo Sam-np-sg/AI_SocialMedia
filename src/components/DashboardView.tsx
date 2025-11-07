@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { fetchUserPosts } from '../services/socialMediaAPI';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import {
   TrendingUp,
@@ -42,7 +43,20 @@ export function DashboardView() {
   useEffect(() => {
     if (user) {
       loadDashboardData();
+      window.dispatchEvent(new Event('refreshNotifications'));
     }
+
+    const handleRefresh = () => {
+      if (user) {
+        loadDashboardData();
+      }
+    };
+
+    window.addEventListener('refreshDashboard', handleRefresh);
+
+    return () => {
+      window.removeEventListener('refreshDashboard', handleRefresh);
+    };
   }, [user]);
 
   const handleCopyContent = async (content: string, postId: string) => {
@@ -58,7 +72,15 @@ export function DashboardView() {
 
   const loadDashboardData = async () => {
     try {
-      const [postsData, accountsData, analyticsData] = await Promise.all([
+      await fetchUserPosts(user!.id);
+
+      const [socialPostsData, postsData, accountsData, analyticsData] = await Promise.all([
+        supabase
+          .from('social_posts')
+          .select('*')
+          .eq('user_id', user!.id)
+          .order('posted_at', { ascending: false })
+          .limit(5),
         supabase
           .from('content_posts')
           .select('*')
@@ -70,7 +92,7 @@ export function DashboardView() {
           .eq('user_id', user!.id)
           .eq('is_connected', true),
         supabase
-          .from('analytics_data')
+          .from('analytics')
           .select('engagement_rate')
           .eq('user_id', user!.id),
       ]);
@@ -85,14 +107,31 @@ export function DashboardView() {
             analyticsData.data.length
           : 0;
 
+      const totalPublishedPosts = (socialPostsData.data?.length || 0) + (postsData.data?.filter(p => p.status === 'published').length || 0);
+
       setStats({
-        totalPosts: postsData.data?.length || 0,
+        totalPosts: totalPublishedPosts,
         scheduledPosts: scheduledCount,
         connectedAccounts: accountsData.data?.length || 0,
         avgEngagement: avgEng,
       });
 
-      setRecentPosts(postsData.data?.slice(0, 5) || []);
+      const draftPosts = (postsData.data?.filter(p => p.status === 'draft').slice(0, 3) || []).map(post => ({
+        id: post.id,
+        platform: post.platforms?.[0] || 'draft',
+        content: post.content,
+        posted_at: post.created_at,
+        likes_count: 0,
+        comments_count: 0,
+        shares_count: 0,
+        engagement_rate: 0,
+        isDraft: true,
+        task_name: post.task_name,
+      }));
+
+      const allRecentPosts = [...draftPosts, ...(socialPostsData.data || [])].slice(0, 5);
+
+      setRecentPosts(allRecentPosts);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -175,53 +214,61 @@ export function DashboardView() {
                   <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-600 dark:text-gray-400">No posts yet</p>
                   <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                    Create your first post using the AI Creator
+                    Connect your social accounts to see your posts here
                   </p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {recentPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="p-5 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                              post.status === 'published'
-                                ? 'bg-emerald-50 text-emerald-700 border border-success dark:bg-emerald-900/20 dark:text-emerald-400'
-                                : post.status === 'scheduled'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-400 dark:bg-blue-900/20 dark:text-blue-400'
-                                : 'bg-gray-50 text-gray-700 border border-gray-300 dark:bg-gray-700 dark:text-gray-300'
-                            }`}
-                          >
-                            {post.status === 'scheduled' && <Clock className="w-3 h-3 inline mr-1" />}
-                            {post.status}
-                          </span>
-                          {post.platforms && post.platforms.length > 0 && (
-                            <div className="flex gap-1">
-                              {post.platforms.map((platform: string) => {
-                                const Icon = getPlatformIcon(platform);
-                                return (
-                                  <div key={platform} className={`${getPlatformColor(platform)} p-1 rounded`}>
-                                    <Icon className="w-3 h-3 text-white" />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
+                  {recentPosts.map((post) => {
+                    const PlatformIcon = getPlatformIcon(post.platform);
+                    const platformColor = getPlatformColor(post.platform);
+
+                    return (
+                      <div
+                        key={post.id}
+                        className={`p-5 border rounded-xl hover:border-primary-300 dark:hover:border-[#3a3456] transition-all duration-300 ${
+                          post.isDraft
+                            ? 'border-yellow-300 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-900/10'
+                            : 'border-gray-200 dark:border-[#2a2538] bg-white dark:bg-[#1f1b2e]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            {post.isDraft ? (
+                              <>
+                                <div className="bg-yellow-500 p-1.5 rounded flex items-center gap-1.5">
+                                  <Edit className="w-4 h-4 text-white" />
+                                </div>
+                                <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded">
+                                  Draft
+                                </span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  {new Date(post.posted_at).toLocaleDateString()}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <div className={`${platformColor} p-1.5 rounded`}>
+                                  <PlatformIcon className="w-4 h-4 text-white" />
+                                </div>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                                  {post.platform}
+                                </span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">
+                                  {new Date(post.posted_at).toLocaleDateString()}
+                                </span>
+                              </>
+                            )}
+                          </div>
                           <button
                             onClick={() => handleCopyContent(post.content, post.id)}
-                            className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors relative group"
+                            className="p-1.5 hover:bg-primary-50 dark:hover:bg-[#28243a] rounded transition-colors relative group"
                             title={copiedId === post.id ? 'Copied!' : 'Copy'}
                           >
                             <Copy className={`w-4 h-4 transition-colors ${
                               copiedId === post.id
                                 ? 'text-success'
-                                : 'text-gray-500 dark:text-gray-400 group-hover:text-primary-600'
+                                : 'text-gray-500 dark:text-[#8a7fa3] group-hover:text-primary-600 dark:group-hover:text-[#b8aaff]'
                             }`} />
                             {copiedId === post.id && (
                               <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
@@ -229,28 +276,51 @@ export function DashboardView() {
                               </span>
                             )}
                           </button>
-                          <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors" title="Edit">
-                            <Edit className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                          </button>
-                          <button className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Delete">
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </button>
                         </div>
-                      </div>
-                      <p className="text-sm text-gray-900 dark:text-gray-200 leading-relaxed mb-3">{post.content}</p>
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                        {post.status === 'draft' && (
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-xs font-medium rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all duration-300 hover:shadow-md">
-                            <Send className="w-3 h-3" />
-                            Publish Now
-                          </button>
+
+                        {post.task_name && post.isDraft && (
+                          <div className="mb-2">
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                              {post.task_name}
+                            </span>
+                          </div>
+                        )}
+
+                        {post.media_url && (
+                          <div className="mb-3 rounded-lg overflow-hidden">
+                            <img
+                              src={post.media_url}
+                              alt="Post media"
+                              className="w-full h-48 object-cover"
+                            />
+                          </div>
+                        )}
+
+                        <p className="text-sm text-gray-900 dark:text-[#b8aaff] leading-relaxed mb-3">{post.content}</p>
+
+                        {post.isDraft ? (
+                          <div className="flex items-center gap-2 text-xs text-yellow-700 dark:text-yellow-300">
+                            <Clock className="w-3 h-3" />
+                            <span>Saved as draft - Edit in Workspace</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <TrendingUp className="w-3 h-3" />
+                              {post.likes_count} likes
+                            </span>
+                            <span>{post.comments_count} comments</span>
+                            {post.shares_count > 0 && <span>{post.shares_count} shares</span>}
+                            {post.engagement_rate > 0 && (
+                              <span className="ml-auto font-medium text-green-600 dark:text-green-400">
+                                {post.engagement_rate.toFixed(1)}% engagement
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

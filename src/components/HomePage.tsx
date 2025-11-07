@@ -1,4 +1,4 @@
-import { Sparkles, Zap, Calendar, BarChart3, Target, CheckCircle2 } from 'lucide-react';
+import { Zap, Calendar, BarChart3, Target, CheckCircle2, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface HomePageProps {
@@ -45,11 +45,11 @@ export function HomePage({ onGetStarted }: HomePageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-blue-600 to-cyan-600 p-2 rounded-lg">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="bg-gradient-to-br from-blue-600 to-cyan-600 p-3 rounded-lg">
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">Social AI</h1>
+                <h1 className="text-lg font-bold text-gray-900">Enqor</h1>
               </div>
             </div>
 

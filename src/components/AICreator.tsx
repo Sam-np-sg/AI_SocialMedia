@@ -5,9 +5,13 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
-import { Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 
-export function AICreator() {
+interface AICreatorProps {
+  onNavigateToWorkspace?: () => void;
+}
+
+export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [generatedContent, setGeneratedContent] = useState('');
@@ -56,19 +60,46 @@ export function AICreator() {
     }
   };
 
+  const splitContentIntoParts = (content: string): string[] => {
+    const sentences = content.split(/(?<=[.!?])\s+/);
+    const midpoint = Math.ceil(sentences.length / 2);
+
+    const part1 = sentences.slice(0, midpoint).join(' ').trim();
+    const part2 = sentences.slice(midpoint).join(' ').trim();
+
+    return [part1, part2].filter(part => part.length > 0);
+  };
+
   const handleSave = async () => {
-    if (!generatedContent || selectedPlatforms.length === 0) return;
+    if (!generatedContent || selectedPlatforms.length === 0) {
+      alert('Please select at least one platform before saving.');
+      return;
+    }
 
     setSaving(true);
     try {
-      const { error } = await supabase.from('content_posts').insert({
+      const taskName = prompt.length > 50 ? prompt.substring(0, 50) + '...' : prompt;
+      const contentParts = splitContentIntoParts(generatedContent);
+
+      const postsToInsert = contentParts.map((content, index) => ({
         user_id: user!.id,
-        content: generatedContent,
+        task_name: `${taskName} (Part ${index + 1})`,
+        content: content,
         platforms: selectedPlatforms,
         status: 'draft',
-      });
+        scheduled_for: new Date(Date.now() + 24 * 60 * 60 * 1000 + (index * 60 * 60 * 1000)).toISOString(),
+      }));
 
-      if (error) throw error;
+      console.log('Saving posts to database:', postsToInsert);
+
+      const { data, error } = await supabase.from('content_posts').insert(postsToInsert).select();
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      console.log('Posts saved successfully:', data);
 
       setSaved(true);
       setTimeout(() => {
@@ -76,9 +107,13 @@ export function AICreator() {
         setGeneratedContent('');
         setPrompt('');
         setSelectedPlatforms([]);
-      }, 2000);
+        if (onNavigateToWorkspace) {
+          onNavigateToWorkspace();
+        }
+      }, 1500);
     } catch (error) {
       console.error('Error saving post:', error);
+      alert('Failed to save post. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -95,26 +130,26 @@ export function AICreator() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">AI Content Creator</h1>
-        <p className="text-gray-600 mt-1">Generate engaging social media posts with AI</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">AI Content Creator</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">Generate engaging social media posts with AI</p>
       </div>
 
-      <Card className="mb-6">
+      <Card className="mb-6 dark:bg-[#1f1b2e] dark:border-[#2a2538]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-blue-600" />
+          <CardTitle className="flex items-center gap-2 dark:text-white">
+            <Sparkles className="w-5 h-5 text-blue-600 dark:text-[#9b8aff]" />
             Create Your Post
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="prompt">What would you like to post about?</Label>
+            <Label htmlFor="prompt" className="dark:text-gray-200">What would you like to post about?</Label>
             <Textarea
               id="prompt"
               placeholder="E.g., Share tips about productivity, announce a new product, celebrate a milestone..."
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="mt-2 min-h-[100px]"
+              className="mt-2 min-h-[100px] dark:bg-[#28243a] dark:text-white dark:border-[#3a3456] dark:placeholder-gray-500"
             />
           </div>
 
@@ -139,19 +174,19 @@ export function AICreator() {
       </Card>
 
       {generatedContent && (
-        <Card className="mb-6">
+        <Card className="mb-6 dark:bg-[#1f1b2e] dark:border-[#2a2538]">
           <CardHeader>
-            <CardTitle>Generated Content</CardTitle>
+            <CardTitle className="dark:text-white">Generated Content</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
               value={generatedContent}
               onChange={(e) => setGeneratedContent(e.target.value)}
-              className="min-h-[150px]"
+              className="min-h-[150px] dark:bg-[#28243a] dark:text-white dark:border-[#3a3456]"
             />
 
             <div>
-              <Label>Select Platforms</Label>
+              <Label className="dark:text-gray-200">Select Platforms</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
                 {platforms.map((platform) => (
                   <button
@@ -159,12 +194,12 @@ export function AICreator() {
                     onClick={() => togglePlatform(platform.id)}
                     className={`p-4 border-2 rounded-lg transition-all ${
                       selectedPlatforms.includes(platform.id)
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-600 bg-blue-50 dark:border-[#7b6cff] dark:bg-[#2f2b45]'
+                        : 'border-gray-200 hover:border-gray-300 dark:border-[#3a3456] dark:hover:border-[#4a4556] dark:bg-[#28243a]'
                     }`}
                   >
                     <div className="text-2xl mb-1">{platform.icon}</div>
-                    <div className="text-sm font-medium">{platform.name}</div>
+                    <div className="text-sm font-medium dark:text-gray-200">{platform.name}</div>
                   </button>
                 ))}
               </div>
@@ -178,15 +213,18 @@ export function AICreator() {
               {saved ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Saved!
+                  Saved as 2 Posts! Redirecting to Workspace...
                 </>
               ) : saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  Saving as 2 separate posts...
                 </>
               ) : (
-                'Save as Draft'
+                <>
+                  Save to Workspace (Split into 2 Posts)
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </>
               )}
             </Button>
           </CardContent>
