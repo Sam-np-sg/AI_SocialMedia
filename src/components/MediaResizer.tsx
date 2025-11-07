@@ -309,23 +309,23 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="mb-2 block">Original</Label>
-                    <div className="border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-900 flex items-center justify-center" style={{ minHeight: '200px' }}>
                       {isVideo ? (
-                        <video src={preview || ''} className="w-full h-48 object-contain bg-black" />
+                        <video src={preview || ''} className="max-w-full max-h-[300px] object-contain" />
                       ) : (
-                        <img src={preview || ''} alt="Original" className="w-full h-48 object-contain bg-black" />
+                        <img src={preview || ''} alt="Original" className="max-w-full max-h-[300px] object-contain" />
                       )}
                     </div>
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <Label>Resized</Label>
+                      <Label>Resized ({specs.aspectRatio})</Label>
                       <span className="flex items-center gap-1 text-green-600 text-xs font-medium">
                         <Check className="w-3 h-3" />
                         Done
                       </span>
                     </div>
-                    <div className="border-2 border-green-500 rounded-lg overflow-hidden bg-black relative">
+                    <div className="border-2 border-green-500 rounded-lg overflow-hidden bg-gray-900 relative flex items-center justify-center" style={{ minHeight: '200px' }}>
                       {isVideo && (
                         <div className="absolute top-2 left-2 bg-blue-600 px-2 py-1 rounded text-xs text-white font-medium z-10">
                           Video Thumbnail (Frame at 1s)
@@ -335,7 +335,11 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                         key={result.url}
                         src={result.url}
                         alt={isVideo ? "Video Thumbnail" : "Resized"}
-                        className="w-full h-48 object-contain"
+                        className="max-w-full max-h-[300px]"
+                        style={{
+                          aspectRatio: `${result.width} / ${result.height}`,
+                          objectFit: 'contain'
+                        }}
                         onLoad={(e) => {
                           const img = e.target as HTMLImageElement;
                           console.log(isVideo ? '✅ Video thumbnail loaded!' : '✅ Resized image loaded!');
@@ -356,6 +360,14 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                 <div className="bg-green-50 rounded-lg p-4 space-y-2">
                   <h4 className="font-semibold text-sm text-gray-900">Results</h4>
                   <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-600">Dimensions:</span>
+                      <span className="ml-2 font-medium">{result.width} × {result.height}px</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Aspect Ratio:</span>
+                      <span className="ml-2 font-medium">{specs.aspectRatio}</span>
+                    </div>
                     <div>
                       <span className="text-gray-600">Original Size:</span>
                       <span className="ml-2 font-medium">{formatFileSize(result.originalSize)}</span>
