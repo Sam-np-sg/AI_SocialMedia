@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
     console.log("Calling n8n webhook with prompt:", prompt);
 
     const n8nResponse = await fetch(
-      "https://zhengbin.app.n8n.cloud/webhook-test/GeminiAI",
+      "https://zhengbin.app.n8n.cloud/webhook/GeminiAI",
       {
         method: "POST",
         headers: {
