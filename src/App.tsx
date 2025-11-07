@@ -35,6 +35,7 @@ function AppContent() {
   const [showAuth, setShowAuth] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [workspaceRefreshTrigger, setWorkspaceRefreshTrigger] = useState(0);
+  const [signingOut, setSigningOut] = useState(false);
 
   const handleViewChange = (view: View) => {
     setCurrentView(view);
@@ -146,10 +147,30 @@ function AppContent() {
           <Button
             variant="ghost"
             className="w-full justify-start dark:text-[#a39bba] dark:hover:bg-[#28243a] hover:text-primary-600 dark:hover:text-[#b8aaff] transition-all duration-300"
-            onClick={() => signOut()}
+            onClick={async () => {
+              try {
+                setSigningOut(true);
+                await signOut();
+              } catch (error) {
+                console.error('Error signing out:', error);
+                alert('Failed to sign out. Please try again.');
+              } finally {
+                setSigningOut(false);
+              }
+            }}
+            disabled={signingOut}
           >
-            <LogOut className="w-5 h-5 mr-3" />
-            Sign out
+            {signingOut ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                Signing out...
+              </>
+            ) : (
+              <>
+                <LogOut className="w-5 h-5 mr-3" />
+                Sign out
+              </>
+            )}
           </Button>
         </div>
       </aside>
