@@ -24,6 +24,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('Current URL:', window.location.href);
     console.log('Has hash params:', window.location.hash.length > 0);
 
+    // Check if we're returning from OAuth and clean the URL immediately
+    if (window.location.hash.includes('access_token')) {
+      console.log('Detected OAuth callback, cleaning URL');
+      // Store the hash temporarily
+      const hash = window.location.hash;
+      // Clean the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Let Supabase process the hash
+      window.location.hash = hash;
+      // Then clean it again after a brief delay
+      setTimeout(() => {
+        if (window.location.hash.includes('access_token')) {
+          window.location.href = window.location.origin;
+        }
+      }, 100);
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Initial session check:', session?.user?.email || 'No session');
       setSession(session);
