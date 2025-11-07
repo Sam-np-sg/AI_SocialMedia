@@ -30,7 +30,11 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
 
   const handleGenerate = async () => {
     setLoading(true);
+    setContentIdea('');
+    setCaption('');
+
     try {
+      console.log('Sending request to n8n webhook...');
       const response = await fetch('https://zhengbin.app.n8n.cloud/webhook-test/GeminiAI', {
         method: 'POST',
         headers: {
@@ -44,18 +48,54 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
         }),
       });
 
+      console.log('Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
-        if (data.contentIdea && data.caption) {
-          setContentIdea(data.contentIdea);
-          setCaption(data.caption);
+        console.log('Full response data from n8n:', data);
+
+        // Handle different possible response structures
+        let contentIdea = '';
+        let caption = '';
+
+        // Check for various possible field names
+        if (data.contentIdea || data.content_idea || data.idea) {
+          contentIdea = data.contentIdea || data.content_idea || data.idea;
+        }
+
+        if (data.caption || data.text || data.content) {
+          caption = data.caption || data.text || data.content;
+        }
+
+        // If response has nested structure
+        if (data.result) {
+          contentIdea = data.result.contentIdea || data.result.content_idea || data.result.idea || contentIdea;
+          caption = data.result.caption || data.result.text || data.result.content || caption;
+        }
+
+        // If response is an array, take the first element
+        if (Array.isArray(data) && data.length > 0) {
+          const firstItem = data[0];
+          contentIdea = firstItem.contentIdea || firstItem.content_idea || firstItem.idea || contentIdea;
+          caption = firstItem.caption || firstItem.text || firstItem.content || caption;
+        }
+
+        if (contentIdea && caption) {
+          console.log('Successfully extracted contentIdea and caption');
+          setContentIdea(contentIdea);
+          setCaption(caption);
         } else {
+          console.warn('Response missing expected fields. Using fallback. Data:', data);
           const fallbackIdea = `Create engaging visual content about: ${prompt}`;
           const fallbackCaption = `🚀 ${prompt}\n\nI'm excited to share this with you! This is an AI-generated post that's optimized for engagement across social platforms.\n\n#SocialMedia #AI #Automation`;
           setContentIdea(fallbackIdea);
           setCaption(fallbackCaption);
         }
       } else {
+        console.error('Response not OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+
         const fallbackIdea = `Create engaging visual content about: ${prompt}`;
         const fallbackCaption = `🚀 ${prompt}\n\nI'm excited to share this with you! This is an AI-generated post that's optimized for engagement across social platforms.\n\n#SocialMedia #AI #Automation`;
         setContentIdea(fallbackIdea);
