@@ -81,6 +81,7 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
     setProcessing(true);
 
     try {
+      console.log('File type:', selectedFile.type, 'Size:', selectedFile.size);
       let resizeResult: ResizeResult;
 
       if (selectedFile.type.startsWith('image/')) {

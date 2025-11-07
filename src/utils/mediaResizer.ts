@@ -234,7 +234,37 @@ export const resizeVideo = async (
       video.currentTime = 1;
 
       video.onseeked = () => {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // Calculate aspect ratio and crop
+        let sourceWidth = video.videoWidth;
+        let sourceHeight = video.videoHeight;
+        let sourceX = 0;
+        let sourceY = 0;
+
+        const targetAspect = specs.width / specs.height;
+        const sourceAspect = sourceWidth / sourceHeight;
+
+        if (sourceAspect > targetAspect) {
+          sourceWidth = sourceHeight * targetAspect;
+          sourceX = (video.videoWidth - sourceWidth) / 2;
+        } else {
+          sourceHeight = sourceWidth / targetAspect;
+          sourceY = (video.videoHeight - sourceHeight) / 2;
+        }
+
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.drawImage(
+          video,
+          sourceX,
+          sourceY,
+          sourceWidth,
+          sourceHeight,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
 
         canvas.toBlob(
           (blob) => {
@@ -243,19 +273,22 @@ export const resizeVideo = async (
               return;
             }
 
+            // Create data URL for preview
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
             resolve({
-              blob: file,
-              url: url,
-              width: video.videoWidth,
-              height: video.videoHeight,
-              size: file.size,
+              blob: blob,
+              url: dataUrl,
+              width: specs.width,
+              height: specs.height,
+              size: blob.size,
               originalSize: file.size,
             });
 
             URL.revokeObjectURL(url);
           },
           'image/jpeg',
-          0.8
+          0.85
         );
       };
     };
