@@ -25,7 +25,8 @@ import {
   Plus,
   Edit,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Send
 } from 'lucide-react';
 
 type ViewType = 'table' | 'card' | 'calendar' | 'gantt' | 'kanban';
@@ -214,6 +215,77 @@ export function SchedulerView({ refreshTrigger }: SchedulerViewProps = {}) {
       loadTasks();
     } catch (error) {
       console.error('Error deleting task:', error);
+    }
+  };
+
+  const handlePublish = async (task: Task) => {
+    if (!task.platforms.includes('twitter')) {
+      alert('This task is not set to publish on Twitter. Please add Twitter to the platforms.');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to publish this post to Twitter now?')) return;
+
+    try {
+      const { data: twitterAccount, error: tokenError } = await supabase
+        .from('social_accounts')
+        .select('access_token, refresh_token, account_handle')
+        .eq('user_id', user!.id)
+        .eq('platform', 'twitter')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (tokenError) {
+        console.error('Error fetching Twitter account:', tokenError);
+        throw new Error('Failed to fetch Twitter account details');
+      }
+
+      if (!twitterAccount) {
+        alert('No active Twitter account found. Please connect your Twitter account first.');
+        return;
+      }
+
+      if (!twitterAccount.access_token) {
+        alert('Twitter access token not found. Please reconnect your Twitter account.');
+        return;
+      }
+
+      const response = await fetch('https://zhengbin.app.n8n.cloud/webhook-test/twitter-post', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: task.content,
+          userId: user?.id,
+          taskId: task.id,
+          mediaUrls: task.media_urls || [],
+          scheduledFor: task.scheduled_for,
+          accessToken: twitterAccount.access_token,
+          refreshToken: twitterAccount.refresh_token,
+          accountHandle: twitterAccount.account_handle,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to publish: ${response.statusText}`);
+      }
+
+      const { error } = await supabase
+        .from('content_posts')
+        .update({
+          status: 'published',
+          published_at: new Date().toISOString()
+        })
+        .eq('id', task.id);
+
+      if (error) throw error;
+
+      alert('Post successfully published to Twitter!');
+      loadTasks();
+    } catch (error) {
+      console.error('Error publishing post:', error);
+      alert('Failed to publish post. Please try again.');
     }
   };
 
@@ -583,6 +655,7 @@ export function SchedulerView({ refreshTrigger }: SchedulerViewProps = {}) {
             tasks={sortedTasks}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onPublish={handlePublish}
             onStatusChange={handleStatusChange}
             getStatusColor={getStatusColor}
             getStatusBadge={getStatusBadge}
@@ -594,6 +667,7 @@ export function SchedulerView({ refreshTrigger }: SchedulerViewProps = {}) {
             tasks={sortedTasks}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onPublish={handlePublish}
             onStatusChange={handleStatusChange}
             getStatusColor={getStatusColor}
             getStatusBadge={getStatusBadge}
@@ -637,7 +711,7 @@ export function SchedulerView({ refreshTrigger }: SchedulerViewProps = {}) {
   );
 }
 
-function TableView({ tasks, onEdit, onDelete, onStatusChange, getStatusColor, getStatusBadge }: any) {
+function TableView({ tasks, onEdit, onDelete, onPublish, onStatusChange, getStatusColor, getStatusBadge }: any) {
   return (
     <Card className="dark:bg-gray-800 dark:border-gray-700">
       <CardContent className="p-0">
@@ -701,6 +775,15 @@ function TableView({ tasks, onEdit, onDelete, onStatusChange, getStatusColor, ge
                     </td>
                     <td className="p-4">
                       <div className="flex gap-2">
+                        {task.platforms.includes('twitter') && task.status !== 'published' && (
+                          <Button
+                            size="sm"
+                            onClick={() => onPublish(task)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -730,7 +813,7 @@ function TableView({ tasks, onEdit, onDelete, onStatusChange, getStatusColor, ge
   );
 }
 
-function CardView({ tasks, onEdit, onDelete, onStatusChange, getStatusColor, getStatusBadge }: any) {
+function CardView({ tasks, onEdit, onDelete, onPublish, onStatusChange, getStatusColor, getStatusBadge }: any) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {tasks.length === 0 ? (
@@ -802,7 +885,7 @@ function CardView({ tasks, onEdit, onDelete, onStatusChange, getStatusColor, get
               </div>
 
               {task.platforms.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-3">
+                <div className="flex flex-wrap gap-1 mt-3 mb-3">
                   {task.platforms.map((platform: string) => (
                     <span
                       key={platform}
@@ -811,6 +894,24 @@ function CardView({ tasks, onEdit, onDelete, onStatusChange, getStatusColor, get
                       {platform}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {task.platforms.includes('twitter') && task.status !== 'published' && (
+                <Button
+                  onClick={() => onPublish(task)}
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+                  size="sm"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Post to Twitter
+                </Button>
+              )}
+
+              {task.status === 'published' && (
+                <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-400 text-sm">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Published
                 </div>
               )}
             </CardContent>
