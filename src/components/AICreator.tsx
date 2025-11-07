@@ -52,10 +52,23 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
       console.log('Response status:', response.status);
 
       if (response.ok) {
-        const data = await response.json();
+        const contentType = response.headers.get('content-type');
+        console.log('Response content-type:', contentType);
+
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const textData = await response.text();
+          console.log('Response is plain text:', textData);
+          data = textData;
+        }
+
         console.log('Full response data from n8n:', data);
         console.log('Response data type:', typeof data);
-        console.log('Response data keys:', Object.keys(data || {}));
+        if (typeof data === 'object' && data !== null) {
+          console.log('Response data keys:', Object.keys(data || {}));
+        }
 
         // Handle different possible response structures
         let contentIdea = '';
