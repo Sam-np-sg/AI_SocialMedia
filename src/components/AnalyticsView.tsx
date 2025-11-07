@@ -8,12 +8,14 @@ import { TrendingHashtags } from './TrendingHashtags';
 import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, Flame, RefreshCw } from 'lucide-react';
 
 type Platform = 'all' | 'twitter' | 'linkedin' | 'instagram' | 'facebook';
+type TimeRange = '1d' | '1w' | '1m' | '6m' | '1y' | 'all';
 
 export function AnalyticsView() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('all');
+  const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('1m');
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
@@ -28,8 +30,7 @@ export function AnalyticsView() {
         .from('analytics')
         .select('*')
         .eq('user_id', user!.id)
-        .order('collected_at', { ascending: false })
-        .limit(30);
+        .order('collected_at', { ascending: false });
 
       if (error) throw error;
       setAnalytics(data || []);
@@ -43,40 +44,129 @@ export function AnalyticsView() {
   const generateDemoData = async () => {
     setGenerating(true);
     try {
-      const platforms = ['twitter', 'linkedin', 'instagram', 'facebook'];
-      const demoData = [];
+      let { data: socialAccounts } = await supabase
+        .from('social_accounts')
+        .select('id, platform')
+        .eq('user_id', user!.id)
+        .eq('is_active', true);
 
-      for (let i = 0; i < 30; i++) {
-        const platform = platforms[Math.floor(Math.random() * platforms.length)];
-        const date = new Date();
-        date.setDate(date.getDate() - i);
+      if (!socialAccounts || socialAccounts.length === 0) {
+        const defaultAccounts = [
+          { platform: 'twitter', account_name: 'Demo Twitter', account_handle: '@demo_twitter' },
+          { platform: 'facebook', account_name: 'Demo Facebook', account_handle: 'demo.facebook' },
+          { platform: 'instagram', account_name: 'Demo Instagram', account_handle: '@demo_insta' },
+          { platform: 'linkedin', account_name: 'Demo LinkedIn', account_handle: 'demo-linkedin' },
+        ];
 
-        demoData.push({
-          user_id: user!.id,
-          platform,
-          likes: Math.floor(Math.random() * 500) + 50,
-          comments: Math.floor(Math.random() * 100) + 10,
-          shares: Math.floor(Math.random() * 50) + 5,
-          impressions: Math.floor(Math.random() * 2000) + 500,
-          clicks: Math.floor(Math.random() * 100) + 20,
-          engagement_rate: parseFloat((Math.random() * 10 + 2).toFixed(2)),
-          collected_at: date.toISOString(),
-        });
+        const { data: newAccounts } = await supabase
+          .from('social_accounts')
+          .insert(
+            defaultAccounts.map(acc => ({
+              user_id: user!.id,
+              ...acc,
+              is_active: true
+            }))
+          )
+          .select('id, platform');
+
+        socialAccounts = newAccounts || [];
       }
 
-      const { error: deleteError } = await supabase.from('analytics').delete().eq('user_id', user!.id);
+      const { error: deleteError } = await supabase
+        .from('posts')
+        .delete()
+        .eq('user_id', user!.id);
+
       if (deleteError) {
-        console.error('Delete error:', deleteError);
-        throw deleteError;
+        console.error('Delete posts error:', deleteError);
       }
 
-      const { error: insertError } = await supabase.from('analytics').insert(demoData);
+      const demoPostsData = [];
+      const postContents = [
+        'Just launched our new product! 🚀 Check it out. #ProductLaunch #Innovation',
+        'Behind the scenes of our creative process 🎨 #BehindTheScenes',
+        'Top 5 tips for growing your business in 2025 #BusinessTips',
+        'Customer success story: How we helped achieve 300% growth #Success',
+        'Excited to share our latest milestone! Thank you for your support 🎉',
+        'New blog post: The future of automation #ContentMarketing',
+        'Team spotlight: Meet our amazing developers 👥 #TeamCulture',
+        'Product update: New features you will love ⚡ #ProductUpdate',
+      ];
+
+      for (const account of socialAccounts) {
+        for (let i = 0; i < 90; i++) {
+          const daysAgo = i;
+          const publishDate = new Date();
+          publishDate.setDate(publishDate.getDate() - daysAgo);
+
+          demoPostsData.push({
+            user_id: user!.id,
+            social_account_id: account.id,
+            platform: account.platform,
+            content: postContents[i % postContents.length],
+            status: 'published',
+            published_at: publishDate.toISOString(),
+            post_id_on_platform: `demo_${account.platform}_${i}_${Date.now()}`,
+          });
+        }
+      }
+
+      const { data: newPosts, error: postsError } = await supabase
+        .from('posts')
+        .insert(demoPostsData)
+        .select('id, social_account_id, platform, published_at');
+
+      if (postsError) {
+        console.error('Error creating posts:', postsError);
+        throw postsError;
+      }
+
+      const { error: deleteAnalyticsError } = await supabase
+        .from('analytics')
+        .delete()
+        .eq('user_id', user!.id);
+
+      if (deleteAnalyticsError) {
+        console.error('Delete analytics error:', deleteAnalyticsError);
+      }
+
+      const demoAnalytics = newPosts
+        .filter(post => post.id && post.social_account_id && post.platform)
+        .map((post) => {
+          const baseImpressions = Math.floor(Math.random() * 5000) + 1000;
+          const likes = Math.floor(baseImpressions * (Math.random() * 0.05 + 0.02));
+          const comments = Math.floor(likes * (Math.random() * 0.3 + 0.1));
+          const shares = Math.floor(likes * (Math.random() * 0.2 + 0.05));
+          const clicks = Math.floor(baseImpressions * (Math.random() * 0.03 + 0.01));
+          const totalEngagement = likes + comments + shares + clicks;
+          const engagementRate = (totalEngagement / baseImpressions) * 100;
+
+          return {
+            post_id: post.id,
+            user_id: user!.id,
+            social_account_id: post.social_account_id,
+            platform: post.platform,
+            impressions: baseImpressions,
+            likes,
+            comments,
+            shares,
+            clicks,
+            engagement_rate: parseFloat(engagementRate.toFixed(2)),
+            collected_at: post.published_at,
+          };
+        });
+
+      const { error: insertError } = await supabase
+        .from('analytics')
+        .insert(demoAnalytics);
+
       if (insertError) {
         console.error('Insert error:', insertError);
         throw insertError;
       }
 
       await loadAnalytics();
+      alert(`Successfully generated demo data with ${demoAnalytics.length} analytics entries spanning 90 days!`);
     } catch (error) {
       console.error('Error generating demo data:', error);
       alert('Failed to generate demo data. Please check console for details.');
@@ -85,9 +175,38 @@ export function AnalyticsView() {
     }
   };
 
-  const filteredAnalytics = selectedPlatform === 'all'
-    ? analytics
-    : analytics.filter(a => a.platform === selectedPlatform);
+  const getDateRangeFilter = (range: TimeRange) => {
+    const now = new Date();
+    const cutoffDate = new Date();
+
+    switch (range) {
+      case '1d':
+        cutoffDate.setDate(now.getDate() - 1);
+        break;
+      case '1w':
+        cutoffDate.setDate(now.getDate() - 7);
+        break;
+      case '1m':
+        cutoffDate.setMonth(now.getMonth() - 1);
+        break;
+      case '6m':
+        cutoffDate.setMonth(now.getMonth() - 6);
+        break;
+      case '1y':
+        cutoffDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case 'all':
+        return new Date(0);
+    }
+
+    return cutoffDate;
+  };
+
+  const filteredAnalytics = analytics.filter(a => {
+    const matchesPlatform = selectedPlatform === 'all' || a.platform === selectedPlatform;
+    const matchesTimeRange = new Date(a.collected_at) >= getDateRangeFilter(selectedTimeRange);
+    return matchesPlatform && matchesTimeRange;
+  });
 
   const totalMetrics = filteredAnalytics.reduce(
     (acc, curr) => ({
@@ -105,6 +224,15 @@ export function AnalyticsView() {
     { id: 'linkedin' as Platform, name: 'LinkedIn', icon: Linkedin },
     { id: 'instagram' as Platform, name: 'Instagram', icon: Instagram },
     { id: 'facebook' as Platform, name: 'Facebook', icon: Facebook },
+  ];
+
+  const timeRanges = [
+    { id: '1d' as TimeRange, label: '1 Day' },
+    { id: '1w' as TimeRange, label: '1 Week' },
+    { id: '1m' as TimeRange, label: '1 Month' },
+    { id: '6m' as TimeRange, label: '6 Months' },
+    { id: '1y' as TimeRange, label: '1 Year' },
+    { id: 'all' as TimeRange, label: 'Overall' },
   ];
 
   if (loading) {
@@ -141,25 +269,46 @@ export function AnalyticsView() {
         </Button>
       </div>
 
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-        {platforms.map((platform) => {
-          const Icon = platform.icon;
-          const isActive = selectedPlatform === platform.id;
-          return (
-            <button
-              key={platform.id}
-              onClick={() => setSelectedPlatform(platform.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                isActive
-                  ? 'bg-blue-600 dark:bg-[#7b6cff] text-white'
-                  : 'bg-white dark:bg-[#1f1b2e] text-gray-700 dark:text-[#a39bba] border border-gray-200 dark:border-[#2a2538] hover:border-blue-300 dark:hover:border-[#3a3456] hover:bg-blue-50 dark:hover:bg-[#28243a]'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {platform.name}
-            </button>
-          );
-        })}
+      <div className="mb-6 space-y-4">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {platforms.map((platform) => {
+            const Icon = platform.icon;
+            const isActive = selectedPlatform === platform.id;
+            return (
+              <button
+                key={platform.id}
+                onClick={() => setSelectedPlatform(platform.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-blue-600 dark:bg-[#7b6cff] text-white'
+                    : 'bg-white dark:bg-[#1f1b2e] text-gray-700 dark:text-[#a39bba] border border-gray-200 dark:border-[#2a2538] hover:border-blue-300 dark:hover:border-[#3a3456] hover:bg-blue-50 dark:hover:bg-[#28243a]'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {platform.name}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {timeRanges.map((range) => {
+            const isActive = selectedTimeRange === range.id;
+            return (
+              <button
+                key={range.id}
+                onClick={() => setSelectedTimeRange(range.id)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-green-600 text-white'
+                    : 'bg-white dark:bg-[#1f1b2e] text-gray-700 dark:text-[#a39bba] border border-gray-200 dark:border-[#2a2538] hover:border-green-300 dark:hover:border-[#3a3456] hover:bg-green-50 dark:hover:bg-[#28243a]'
+                }`}
+              >
+                {range.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
