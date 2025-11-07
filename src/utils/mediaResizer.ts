@@ -127,7 +127,7 @@ export const resizeImage = async (
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        console.log('Drawing image to canvas...');
+        console.log('Canvas setup:', { width: canvas.width, height: canvas.height, quality });
         ctx.drawImage(
           img,
           sourceX,
@@ -141,45 +141,64 @@ export const resizeImage = async (
         );
         console.log('Image drawn successfully');
 
-        // Get data URL immediately after drawing (synchronous)
-        try {
-          const dataUrl = canvas.toDataURL('image/jpeg', quality);
-          console.log('✅ Data URL created, length:', dataUrl.length);
+        // Create blob with proper compression
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Failed to create blob'));
+              return;
+            }
 
-          // Verify it's a valid data URL
-          if (!dataUrl.startsWith('data:image')) {
-            throw new Error('Invalid data URL created');
-          }
+            console.log('✅ Blob created:', { size: blob.size, type: blob.type, quality });
 
-          // Create blob for download
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                reject(new Error('Failed to create blob'));
-                return;
-              }
+            // If blob is still too large (> 10MB), recompress with lower quality
+            if (blob.size > 10 * 1024 * 1024) {
+              console.log('⚠️ Blob too large, recompressing with quality 0.6');
+              canvas.toBlob(
+                (recompressedBlob) => {
+                  if (!recompressedBlob) {
+                    reject(new Error('Failed to recompress'));
+                    return;
+                  }
+                  console.log('✅ Recompressed:', { was: blob.size, now: recompressedBlob.size });
+                  const url = URL.createObjectURL(recompressedBlob);
+                  resolve({
+                    blob: recompressedBlob,
+                    url,
+                    width: specs.width,
+                    height: specs.height,
+                    size: recompressedBlob.size,
+                    originalSize: file.size,
+                  });
+                },
+                'image/jpeg',
+                0.6
+              );
+              return;
+            }
 
-              console.log('✅ Blob created:', {
-                size: blob.size,
-                type: blob.type
-              });
+            // Use data URL for smaller files, blob URL for larger
+            let url: string;
+            if (blob.size < 5 * 1024 * 1024) {
+              url = canvas.toDataURL('image/jpeg', quality);
+              console.log('✅ Using data URL');
+            } else {
+              url = URL.createObjectURL(blob);
+              console.log('✅ Using blob URL');
+            }
 
-              resolve({
-                blob,
-                url: dataUrl,
-                width: specs.width,
-                height: specs.height,
-                size: blob.size,
-                originalSize: file.size,
-              });
-            },
-            'image/jpeg',
-            quality
-          );
-        } catch (err) {
-          console.error('❌ Error creating data URL:', err);
-          reject(err);
-        }
+            resolve({
+              blob,
+              url,
+              width: specs.width,
+              height: specs.height,
+              size: blob.size,
+              originalSize: file.size,
+            });
+          },
+          'image/jpeg',
+          quality
+        );
       };
 
       img.onerror = () => {
