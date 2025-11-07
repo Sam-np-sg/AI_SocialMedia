@@ -49,10 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (event === 'SIGNED_IN' && session) {
           console.log('User signed in successfully!');
-          const hashParams = new URLSearchParams(window.location.hash.substring(1));
-          if (hashParams.has('access_token')) {
-            console.log('Cleaning OAuth hash from URL');
-            window.history.replaceState({}, document.title, window.location.pathname);
+          if (window.location.hash.includes('access_token')) {
+            console.log('Cleaning OAuth hash from URL and redirecting');
+            window.location.href = window.location.origin;
           }
         }
       })();
