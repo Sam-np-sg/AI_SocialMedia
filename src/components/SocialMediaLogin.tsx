@@ -21,17 +21,24 @@ export function SocialMediaLogin({ platform, onBack }: SocialMediaLoginProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleConnect = async () => {
+    alert('handleConnect was called!');
     setError(null);
     setIsLoading(true);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
+      console.log('Connect button clicked, session:', {
+        hasSession: !!session,
+        userId: session?.user?.id
+      });
+
       if (!session?.user) {
         throw new Error('You must be logged in to connect social accounts');
       }
 
       const sessionData = JSON.stringify(session);
+      console.log('About to initiate OAuth with session data length:', sessionData.length);
       await initiateOAuth(platform.id, sessionData);
     } catch (err: any) {
       console.error('Connect error:', err);

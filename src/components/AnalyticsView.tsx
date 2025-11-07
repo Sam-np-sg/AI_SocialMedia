@@ -83,8 +83,8 @@ export function AnalyticsView() {
               onClick={() => setSelectedPlatform(platform.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                  ? 'bg-blue-600 dark:bg-[#7b6cff] text-white'
+                  : 'bg-white dark:bg-[#1f1b2e] text-gray-700 dark:text-[#a39bba] border border-gray-200 dark:border-[#2a2538] hover:border-blue-300 dark:hover:border-[#3a3456] hover:bg-blue-50 dark:hover:bg-[#28243a]'
               }`}
             >
               <Icon className="w-4 h-4" />

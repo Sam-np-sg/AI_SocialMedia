@@ -12,7 +12,6 @@ import { SocialAccounts } from './components/SocialAccounts';
 import { SettingsView } from './components/SettingsView';
 import { OAuthCallback } from './components/OAuthCallback';
 import { NotificationBell } from './components/NotificationBell';
-import { Logo } from './components/Logo';
 import { Button } from './components/ui/button';
 import {
   LayoutDashboard,
@@ -97,7 +96,7 @@ function AppContent() {
         <div className="p-6 border-b border-primary-100 dark:border-[#2a2538] transition-colors duration-500 bg-gradient-to-br from-primary-50 to-pink-50 dark:from-[#1f1b2e] dark:to-[#1f1b2e]">
           <div className="flex items-center gap-3 animate-fadeIn">
             <div className="bg-gradient-to-br from-primary-600 to-pink-500 dark:from-[#7b6cff] dark:to-[#9b8aff] p-2 rounded-lg transition-all duration-300 hover:scale-105">
-              <Logo className="w-6 h-6 text-white" />
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-pink-600 dark:from-[#9b8aff] dark:to-[#d8a8ff] bg-clip-text text-transparent transition-colors duration-500">Enqor</h1>
