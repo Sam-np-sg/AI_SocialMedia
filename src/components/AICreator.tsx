@@ -60,12 +60,38 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
         let contentIdea = '';
         let caption = '';
 
-        // Check for various possible field names
-        if (data.contentIdea || data.content_idea || data.idea) {
+        // Check if response has an 'output' field with combined text
+        if (data.output && typeof data.output === 'string') {
+          // Parse the output string to extract contentIdea and caption
+          const outputText = data.output;
+
+          // Look for patterns like "Idea:" or "Content Idea:" followed by "Caption:"
+          const ideaMatch = outputText.match(/(?:Content\s+)?Idea:\s*([^\n]+(?:\n(?!Caption:)[^\n]+)*)/i);
+          const captionMatch = outputText.match(/Caption:\s*([\s\S]+)/i);
+
+          if (ideaMatch && captionMatch) {
+            contentIdea = ideaMatch[1].trim();
+            caption = captionMatch[1].trim();
+          } else {
+            // If no clear pattern, try to split on common delimiters
+            const parts = outputText.split(/\n\n+/);
+            if (parts.length >= 2) {
+              contentIdea = parts[0].replace(/^(?:Content\s+)?Idea:\s*/i, '').trim();
+              caption = parts.slice(1).join('\n\n').replace(/^Caption:\s*/i, '').trim();
+            } else {
+              // If still can't parse, use the whole output as caption
+              contentIdea = `Create engaging visual content about: ${prompt}`;
+              caption = outputText;
+            }
+          }
+        }
+
+        // Check for various possible field names (fallback)
+        if (!contentIdea && (data.contentIdea || data.content_idea || data.idea)) {
           contentIdea = data.contentIdea || data.content_idea || data.idea;
         }
 
-        if (data.caption || data.text || data.content) {
+        if (!caption && (data.caption || data.text || data.content)) {
           caption = data.caption || data.text || data.content;
         }
 
