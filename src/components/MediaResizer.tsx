@@ -198,7 +198,12 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                 {mediaTypes.map((type) => (
                   <button
                     key={type}
-                    onClick={() => setSelectedMediaType(type)}
+                    onClick={() => {
+                      setSelectedMediaType(type);
+                      if (result && selectedFile) {
+                        handleResize();
+                      }
+                    }}
                     className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
                       selectedMediaType === type
                         ? 'border-blue-600 bg-blue-50 text-blue-700'
@@ -212,12 +217,20 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
             </div>
 
             <div>
-              <Label className="mb-2 block">Crop Position</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Crop Position</Label>
+                <span className="text-xs text-gray-500">Adjusts when changing aspect ratio</span>
+              </div>
               <div className="grid grid-cols-5 gap-2">
                 {(['center', 'top', 'bottom', 'left', 'right'] as CropPosition[]).map((position) => (
                   <button
                     key={position}
-                    onClick={() => setCropPosition(position)}
+                    onClick={() => {
+                      setCropPosition(position);
+                      if (result && selectedFile) {
+                        handleResize();
+                      }
+                    }}
                     className={`p-3 rounded-lg border-2 text-sm font-medium capitalize transition-all ${
                       cropPosition === position
                         ? 'border-green-600 bg-green-50 text-green-700'
@@ -228,6 +241,9 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                When changing target format, this controls which part of your {isVideo ? 'video' : 'image'} to keep in view
+              </p>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
@@ -282,24 +298,26 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                         Done
                       </span>
                     </div>
-                    <div className="border-2 border-green-500 rounded-lg overflow-hidden bg-black">
+                    <div className="border-2 border-green-500 rounded-lg overflow-hidden bg-black relative">
+                      {isVideo && (
+                        <div className="absolute top-2 left-2 bg-blue-600 px-2 py-1 rounded text-xs text-white font-medium z-10">
+                          Video Thumbnail (Frame at 1s)
+                        </div>
+                      )}
                       <img
                         key={result.url}
                         src={result.url}
-                        alt="Resized"
+                        alt={isVideo ? "Video Thumbnail" : "Resized"}
                         className="w-full h-48 object-contain"
                         onLoad={() => {
-                          console.log('✅ Resized image loaded successfully!');
+                          console.log(isVideo ? '✅ Video thumbnail loaded!' : '✅ Resized image loaded!');
                         }}
                         onError={(e) => {
-                          console.error('❌ Failed to load resized image');
+                          console.error('❌ Failed to load resized media');
                           console.log('Result URL:', result.url);
                           console.log('Blob size:', result.size);
                         }}
                       />
-                      <div className="p-1 text-xs text-gray-400 font-mono truncate bg-gray-900">
-                        URL: {result.url.substring(0, 40)}...
-                      </div>
                     </div>
                   </div>
                 </div>
