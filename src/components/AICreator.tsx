@@ -31,7 +31,7 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
   const handleGenerate = async () => {
     setLoading(true);
     try {
-      const response = await fetch('https://zhengbin.app.n8n.cloud/webhook-test/GeminiAI', {
+      const response = await fetch('https://samyog.app.n8n.cloud/webhook/receive-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
