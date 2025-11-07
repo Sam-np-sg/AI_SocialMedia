@@ -153,7 +153,7 @@ export const resizeImage = async (
 
             // If blob is still too large (> 10MB), recompress with lower quality
             if (blob.size > 10 * 1024 * 1024) {
-              console.log('⚠️ Blob too large, recompressing with quality 0.6');
+              console.log('⚠️ Blob too large, recompressing with quality 0.5');
               canvas.toBlob(
                 (recompressedBlob) => {
                   if (!recompressedBlob) {
@@ -161,10 +161,10 @@ export const resizeImage = async (
                     return;
                   }
                   console.log('✅ Recompressed:', { was: blob.size, now: recompressedBlob.size });
-                  const url = URL.createObjectURL(recompressedBlob);
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
                   resolve({
                     blob: recompressedBlob,
-                    url,
+                    url: dataUrl,
                     width: specs.width,
                     height: specs.height,
                     size: recompressedBlob.size,
@@ -172,24 +172,18 @@ export const resizeImage = async (
                   });
                 },
                 'image/jpeg',
-                0.6
+                0.5
               );
               return;
             }
 
-            // Use data URL for smaller files, blob URL for larger
-            let url: string;
-            if (blob.size < 5 * 1024 * 1024) {
-              url = canvas.toDataURL('image/jpeg', quality);
-              console.log('✅ Using data URL');
-            } else {
-              url = URL.createObjectURL(blob);
-              console.log('✅ Using blob URL');
-            }
+            // Always use data URLs for reliability in WebContainer environment
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            console.log('✅ Using data URL, length:', dataUrl.length);
 
             resolve({
               blob,
-              url,
+              url: dataUrl,
               width: specs.width,
               height: specs.height,
               size: blob.size,
