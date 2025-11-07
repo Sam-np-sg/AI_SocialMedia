@@ -250,7 +250,7 @@ export function SchedulerView({ refreshTrigger }: SchedulerViewProps = {}) {
         return;
       }
 
-      const response = await fetch('https://zhengbin.app.n8n.cloud/webhook-test/twitter-post', {
+      const response = await fetch('https://zhengbin.app.n8n.cloud/webhook/twitterpost', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
