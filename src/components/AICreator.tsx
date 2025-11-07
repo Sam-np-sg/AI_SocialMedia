@@ -36,17 +36,17 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
     try {
       console.log('Sending request to generate AI content...');
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-ai-content`;
+      const apiUrl = 'https://zhengbin.app.n8n.cloud/webhook/GeminiAI';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           prompt: prompt,
           userId: user?.id,
           email: user?.email,
+          timestamp: new Date().toISOString(),
         }),
       });
 
