@@ -25,7 +25,7 @@ export function PerformanceGraph({ data = [], type = 'area' }: PerformanceGraphP
     likes: item.likes || 0,
     comments: item.comments || 0,
     shares: item.shares || 0,
-    views: item.impressions || 0,
+    views: item.views || item.impressions || 0,
     engagement: item.engagement_rate || 0,
   })).reverse();
 
