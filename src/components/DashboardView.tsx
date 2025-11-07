@@ -176,15 +176,22 @@ export function DashboardView() {
         });
       }
 
-      await supabase.from('analytics').delete().eq('user_id', user!.id);
+      const { error: deleteError } = await supabase.from('analytics').delete().eq('user_id', user!.id);
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw deleteError;
+      }
 
-      const { error } = await supabase.from('analytics').insert(demoData);
-
-      if (error) throw error;
+      const { error: insertError } = await supabase.from('analytics').insert(demoData);
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw insertError;
+      }
 
       await loadDashboardData();
     } catch (error) {
       console.error('Error generating demo data:', error);
+      alert('Failed to generate demo data. Please check console for details.');
     } finally {
       setGenerating(false);
     }
