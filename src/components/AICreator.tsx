@@ -60,6 +60,16 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
     }
   };
 
+  const splitContentIntoParts = (content: string): string[] => {
+    const sentences = content.split(/(?<=[.!?])\s+/);
+    const midpoint = Math.ceil(sentences.length / 2);
+
+    const part1 = sentences.slice(0, midpoint).join(' ').trim();
+    const part2 = sentences.slice(midpoint).join(' ').trim();
+
+    return [part1, part2].filter(part => part.length > 0);
+  };
+
   const handleSave = async () => {
     if (!generatedContent || selectedPlatforms.length === 0) {
       alert('Please select at least one platform before saving.');
@@ -69,26 +79,27 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
     setSaving(true);
     try {
       const taskName = prompt.length > 50 ? prompt.substring(0, 50) + '...' : prompt;
+      const contentParts = splitContentIntoParts(generatedContent);
 
-      const postData = {
+      const postsToInsert = contentParts.map((content, index) => ({
         user_id: user!.id,
-        task_name: taskName,
-        content: generatedContent,
+        task_name: `${taskName} (Part ${index + 1})`,
+        content: content,
         platforms: selectedPlatforms,
         status: 'draft',
-        scheduled_for: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      };
+        scheduled_for: new Date(Date.now() + 24 * 60 * 60 * 1000 + (index * 60 * 60 * 1000)).toISOString(),
+      }));
 
-      console.log('Saving post to database:', postData);
+      console.log('Saving posts to database:', postsToInsert);
 
-      const { data, error } = await supabase.from('content_posts').insert(postData).select();
+      const { data, error } = await supabase.from('content_posts').insert(postsToInsert).select();
 
       if (error) {
         console.error('Database error:', error);
         throw error;
       }
 
-      console.log('Post saved successfully:', data);
+      console.log('Posts saved successfully:', data);
 
       setSaved(true);
       setTimeout(() => {
@@ -202,16 +213,16 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
               {saved ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Saved! Redirecting to Workspace...
+                  Saved as 2 Posts! Redirecting to Workspace...
                 </>
               ) : saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
+                  Saving as 2 separate posts...
                 </>
               ) : (
                 <>
-                  Save to Workspace
+                  Save to Workspace (Split into 2 Posts)
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
