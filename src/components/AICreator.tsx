@@ -14,7 +14,8 @@ interface AICreatorProps {
 export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
   const { user } = useAuth();
   const [prompt, setPrompt] = useState('');
-  const [generatedContent, setGeneratedContent] = useState('');
+  const [contentIdea, setContentIdea] = useState('');
+  const [caption, setCaption] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -45,33 +46,34 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
 
       if (response.ok) {
         const data = await response.json();
-        const content = data.generatedContent || `🚀 ${prompt}\n\nI'm excited to share this with you! This is an AI-generated post that's optimized for engagement across social platforms.\n\n#SocialMedia #AI #Automation`;
-        setGeneratedContent(content);
+        if (data.contentIdea && data.caption) {
+          setContentIdea(data.contentIdea);
+          setCaption(data.caption);
+        } else {
+          const fallbackIdea = `Create engaging visual content about: ${prompt}`;
+          const fallbackCaption = `🚀 ${prompt}\n\nI'm excited to share this with you! This is an AI-generated post that's optimized for engagement across social platforms.\n\n#SocialMedia #AI #Automation`;
+          setContentIdea(fallbackIdea);
+          setCaption(fallbackCaption);
+        }
       } else {
-        const content = `🚀 ${prompt}\n\nI'm excited to share this with you! This is an AI-generated post that's optimized for engagement across social platforms.\n\n#SocialMedia #AI #Automation`;
-        setGeneratedContent(content);
+        const fallbackIdea = `Create engaging visual content about: ${prompt}`;
+        const fallbackCaption = `🚀 ${prompt}\n\nI'm excited to share this with you! This is an AI-generated post that's optimized for engagement across social platforms.\n\n#SocialMedia #AI #Automation`;
+        setContentIdea(fallbackIdea);
+        setCaption(fallbackCaption);
       }
     } catch (error) {
       console.error('Error calling webhook:', error);
-      const content = `🚀 ${prompt}\n\nI'm excited to share this with you! This is an AI-generated post that's optimized for engagement across social platforms.\n\n#SocialMedia #AI #Automation`;
-      setGeneratedContent(content);
+      const fallbackIdea = `Create engaging visual content about: ${prompt}`;
+      const fallbackCaption = `🚀 ${prompt}\n\nI'm excited to share this with you! This is an AI-generated post that's optimized for engagement across social platforms.\n\n#SocialMedia #AI #Automation`;
+      setContentIdea(fallbackIdea);
+      setCaption(fallbackCaption);
     } finally {
       setLoading(false);
     }
   };
 
-  const splitContentIntoParts = (content: string): string[] => {
-    const sentences = content.split(/(?<=[.!?])\s+/);
-    const midpoint = Math.ceil(sentences.length / 2);
-
-    const part1 = sentences.slice(0, midpoint).join(' ').trim();
-    const part2 = sentences.slice(midpoint).join(' ').trim();
-
-    return [part1, part2].filter(part => part.length > 0);
-  };
-
   const handleSave = async () => {
-    if (!generatedContent || selectedPlatforms.length === 0) {
+    if (!caption || selectedPlatforms.length === 0) {
       alert('Please select at least one platform before saving.');
       return;
     }
@@ -79,32 +81,33 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
     setSaving(true);
     try {
       const taskName = prompt.length > 50 ? prompt.substring(0, 50) + '...' : prompt;
-      const contentParts = splitContentIntoParts(generatedContent);
+      const fullContent = `Content Idea: ${contentIdea}\n\nCaption: ${caption}`;
 
-      const postsToInsert = contentParts.map((content, index) => ({
+      const postToInsert = {
         user_id: user!.id,
-        task_name: `${taskName} (Part ${index + 1})`,
-        content: content,
+        task_name: taskName,
+        content: fullContent,
         platforms: selectedPlatforms,
         status: 'draft',
-        scheduled_for: new Date(Date.now() + 24 * 60 * 60 * 1000 + (index * 60 * 60 * 1000)).toISOString(),
-      }));
+        scheduled_for: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      };
 
-      console.log('Saving posts to database:', postsToInsert);
+      console.log('Saving post to database:', postToInsert);
 
-      const { data, error } = await supabase.from('content_posts').insert(postsToInsert).select();
+      const { data, error } = await supabase.from('content_posts').insert([postToInsert]).select();
 
       if (error) {
         console.error('Database error:', error);
         throw error;
       }
 
-      console.log('Posts saved successfully:', data);
+      console.log('Post saved successfully:', data);
 
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
-        setGeneratedContent('');
+        setContentIdea('');
+        setCaption('');
         setPrompt('');
         setSelectedPlatforms([]);
         if (onNavigateToWorkspace) {
@@ -173,17 +176,33 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
         </CardContent>
       </Card>
 
-      {generatedContent && (
+      {(contentIdea || caption) && (
         <Card className="mb-6 dark:bg-[#1f1b2e] dark:border-[#2a2538]">
           <CardHeader>
             <CardTitle className="dark:text-white">Generated Content</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Textarea
-              value={generatedContent}
-              onChange={(e) => setGeneratedContent(e.target.value)}
-              className="min-h-[150px] dark:bg-[#28243a] dark:text-white dark:border-[#3a3456]"
-            />
+            <div>
+              <Label htmlFor="contentIdea" className="dark:text-gray-200 font-semibold">Content Idea</Label>
+              <Textarea
+                id="contentIdea"
+                value={contentIdea}
+                onChange={(e) => setContentIdea(e.target.value)}
+                placeholder="Idea for what visual or content to create..."
+                className="mt-2 min-h-[100px] dark:bg-[#28243a] dark:text-white dark:border-[#3a3456] dark:placeholder-gray-500"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="caption" className="dark:text-gray-200 font-semibold">Caption</Label>
+              <Textarea
+                id="caption"
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Caption text to accompany the content..."
+                className="mt-2 min-h-[150px] dark:bg-[#28243a] dark:text-white dark:border-[#3a3456] dark:placeholder-gray-500"
+              />
+            </div>
 
             <div>
               <Label className="dark:text-gray-200">Select Platforms</Label>
@@ -213,16 +232,16 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
               {saved ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Saved as 2 Posts! Redirecting to Workspace...
+                  Saved! Redirecting to Workspace...
                 </>
               ) : saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving as 2 separate posts...
+                  Saving post...
                 </>
               ) : (
                 <>
-                  Save to Workspace (Split into 2 Posts)
+                  Save to Workspace
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
