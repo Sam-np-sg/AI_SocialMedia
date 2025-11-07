@@ -36,8 +36,7 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
     try {
       console.log('Sending request to generate AI content...');
 
-      const apiUrl = 'https://zhengbin.app.n8n.cloud/webhook/GeminiAI';
-      const response = await fetch(apiUrl, {
+      const response = await fetch("https://zhengbin.app.n8n.cloud/webhook/GeminiAI", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
