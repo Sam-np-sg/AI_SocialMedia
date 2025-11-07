@@ -19,7 +19,7 @@ export const supabase = createClient(
       autoRefreshToken: true,
       storage: window.localStorage,
       storageKey: 'supabase.auth.token',
-      detectSessionInUrl: false,
+      detectSessionInUrl: true,
     }
   }
 );
