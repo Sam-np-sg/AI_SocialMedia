@@ -43,7 +43,7 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (preview) {
+    if (preview && preview.startsWith('blob:')) {
       URL.revokeObjectURL(preview);
     }
 
@@ -85,13 +85,15 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
 
       if (selectedFile.type.startsWith('image/')) {
         console.log('Processing as image...');
-        resizeResult = await resizeImage(selectedFile, selectedMediaType, 0.92, cropPosition);
+        const quality = selectedFile.size > 10 * 1024 * 1024 ? 0.75 : 0.92;
+        resizeResult = await resizeImage(selectedFile, selectedMediaType, quality, cropPosition);
         console.log('Resize complete, result:', {
           size: resizeResult.size,
           width: resizeResult.width,
           height: resizeResult.height,
           urlType: resizeResult.url.startsWith('data:') ? 'data URL' : 'blob URL',
-          urlLength: resizeResult.url.length
+          urlLength: resizeResult.url.length,
+          urlStart: resizeResult.url.substring(0, 50)
         });
       } else if (selectedFile.type.startsWith('video/')) {
         console.log('Processing as video...');
