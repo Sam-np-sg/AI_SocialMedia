@@ -146,6 +146,8 @@ export function SchedulerView({ refreshTrigger }: SchedulerViewProps = {}) {
     setSaving(true);
 
     try {
+      console.log('Form data:', formData);
+
       const taskData = {
         user_id: user!.id,
         task_name: formData.task_name,
@@ -157,17 +159,28 @@ export function SchedulerView({ refreshTrigger }: SchedulerViewProps = {}) {
         media_urls: formData.media_urls,
       };
 
+      console.log('Submitting task data:', taskData);
+
       if (editingTask) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('content_posts')
           .update(taskData)
-          .eq('id', editingTask.id);
+          .eq('id', editingTask.id)
+          .select();
 
+        console.log('Update response:', { data, error });
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('content_posts').insert(taskData);
+        const { data, error } = await supabase
+          .from('content_posts')
+          .insert(taskData)
+          .select();
+
+        console.log('Insert response:', { data, error });
         if (error) throw error;
       }
+
+      console.log('Task saved successfully!');
 
       setFormData({
         task_name: '',
@@ -180,9 +193,10 @@ export function SchedulerView({ refreshTrigger }: SchedulerViewProps = {}) {
       });
       setShowTaskForm(false);
       setEditingTask(null);
-      loadTasks();
-    } catch (error) {
+      await loadTasks();
+    } catch (error: any) {
       console.error('Error saving task:', error);
+      alert(`Failed to save task: ${error.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
