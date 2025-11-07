@@ -61,8 +61,22 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
         let contentIdea = '';
         let caption = '';
 
+        // If response is an array, take the first element (n8n common format)
+        if (Array.isArray(data) && data.length > 0) {
+          const firstItem = data[0];
+          if (typeof firstItem === 'string') {
+            contentIdea = `Create engaging visual content about: ${prompt}`;
+            caption = firstItem;
+          } else if (firstItem.output && typeof firstItem.output === 'string') {
+            contentIdea = `Create engaging visual content about: ${prompt}`;
+            caption = firstItem.output;
+          } else {
+            contentIdea = firstItem.contentIdea || firstItem.content_idea || firstItem.idea || `Create engaging visual content about: ${prompt}`;
+            caption = firstItem.caption || firstItem.text || firstItem.content || firstItem.message || firstItem.output || '';
+          }
+        }
         // If response is a string directly, use it as caption
-        if (typeof data === 'string') {
+        else if (typeof data === 'string') {
           contentIdea = `Create engaging visual content about: ${prompt}`;
           caption = data;
         }
@@ -73,23 +87,8 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
         }
         // Check if response has an 'output' field with combined text
         else if (data.output && typeof data.output === 'string') {
-          const outputText = data.output;
-          const ideaMatch = outputText.match(/(?:Content\s+)?Idea:\s*([^\n]+(?:\n(?!Caption:)[^\n]+)*)/i);
-          const captionMatch = outputText.match(/Caption:\s*([\s\S]+)/i);
-
-          if (ideaMatch && captionMatch) {
-            contentIdea = ideaMatch[1].trim();
-            caption = captionMatch[1].trim();
-          } else {
-            const parts = outputText.split(/\n\n+/);
-            if (parts.length >= 2) {
-              contentIdea = parts[0].replace(/^(?:Content\s+)?Idea:\s*/i, '').trim();
-              caption = parts.slice(1).join('\n\n').replace(/^Caption:\s*/i, '').trim();
-            } else {
-              contentIdea = `Create engaging visual content about: ${prompt}`;
-              caption = outputText;
-            }
-          }
+          contentIdea = `Create engaging visual content about: ${prompt}`;
+          caption = data.output;
         }
         // Check for text field
         else if (data.text) {
@@ -110,17 +109,6 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
         else if (data.result) {
           contentIdea = data.result.contentIdea || data.result.content_idea || data.result.idea || `Create engaging visual content about: ${prompt}`;
           caption = data.result.caption || data.result.text || data.result.content || data.result.message || '';
-        }
-        // If response is an array, take the first element
-        else if (Array.isArray(data) && data.length > 0) {
-          const firstItem = data[0];
-          if (typeof firstItem === 'string') {
-            contentIdea = `Create engaging visual content about: ${prompt}`;
-            caption = firstItem;
-          } else {
-            contentIdea = firstItem.contentIdea || firstItem.content_idea || firstItem.idea || `Create engaging visual content about: ${prompt}`;
-            caption = firstItem.caption || firstItem.text || firstItem.content || firstItem.message || '';
-          }
         }
 
         if (contentIdea && caption) {
