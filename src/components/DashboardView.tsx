@@ -220,12 +220,21 @@ export function DashboardView() {
           }
         }
 
-        const { data: newPosts } = await supabase
+        const { data: newPosts, error: postsError } = await supabase
           .from('posts')
           .insert(demoPostsData)
           .select('id, social_account_id, platform');
 
+        if (postsError) {
+          console.error('Error creating posts:', postsError);
+          throw postsError;
+        }
+
         existingPosts = newPosts || [];
+      }
+
+      if (!existingPosts || existingPosts.length === 0) {
+        throw new Error('No posts available to generate analytics');
       }
 
       const { error: deleteError } = await supabase
@@ -237,29 +246,31 @@ export function DashboardView() {
         console.error('Delete error:', deleteError);
       }
 
-      const demoAnalytics = existingPosts.map((post) => {
-        const baseImpressions = Math.floor(Math.random() * 5000) + 1000;
-        const likes = Math.floor(baseImpressions * (Math.random() * 0.05 + 0.02));
-        const comments = Math.floor(likes * (Math.random() * 0.3 + 0.1));
-        const shares = Math.floor(likes * (Math.random() * 0.2 + 0.05));
-        const clicks = Math.floor(baseImpressions * (Math.random() * 0.03 + 0.01));
-        const totalEngagement = likes + comments + shares + clicks;
-        const engagementRate = (totalEngagement / baseImpressions) * 100;
+      const demoAnalytics = existingPosts
+        .filter(post => post.id && post.social_account_id && post.platform)
+        .map((post) => {
+          const baseImpressions = Math.floor(Math.random() * 5000) + 1000;
+          const likes = Math.floor(baseImpressions * (Math.random() * 0.05 + 0.02));
+          const comments = Math.floor(likes * (Math.random() * 0.3 + 0.1));
+          const shares = Math.floor(likes * (Math.random() * 0.2 + 0.05));
+          const clicks = Math.floor(baseImpressions * (Math.random() * 0.03 + 0.01));
+          const totalEngagement = likes + comments + shares + clicks;
+          const engagementRate = (totalEngagement / baseImpressions) * 100;
 
-        return {
-          post_id: post.id,
-          user_id: user!.id,
-          social_account_id: post.social_account_id,
-          platform: post.platform,
-          impressions: baseImpressions,
-          likes,
-          comments,
-          shares,
-          clicks,
-          engagement_rate: parseFloat(engagementRate.toFixed(2)),
-          collected_at: new Date().toISOString(),
-        };
-      });
+          return {
+            post_id: post.id,
+            user_id: user!.id,
+            social_account_id: post.social_account_id,
+            platform: post.platform,
+            impressions: baseImpressions,
+            likes,
+            comments,
+            shares,
+            clicks,
+            engagement_rate: parseFloat(engagementRate.toFixed(2)),
+            collected_at: new Date().toISOString(),
+          };
+        });
 
       const { error: insertError } = await supabase
         .from('analytics')
