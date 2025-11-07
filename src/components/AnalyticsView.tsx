@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { PerformanceGraph } from './PerformanceGraph';
 import { TrendingHashtags } from './TrendingHashtags';
-import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, Flame, RefreshCw } from 'lucide-react';
+import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, Flame, RefreshCw, Clock, Sparkles } from 'lucide-react';
 
 type Platform = 'all' | 'twitter' | 'linkedin' | 'instagram' | 'facebook';
 type TimeRange = '1d' | '1w' | '1m' | '6m' | '1y' | 'all';
+type PostSortType = 'recent' | 'best';
 
 export function AnalyticsView() {
   const { user } = useAuth();
@@ -17,6 +18,8 @@ export function AnalyticsView() {
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('all');
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('1m');
   const [generating, setGenerating] = useState(false);
+  const [postSort, setPostSort] = useState<PostSortType>('recent');
+  const [showAllPosts, setShowAllPosts] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -392,7 +395,41 @@ export function AnalyticsView() {
         <div className="lg:col-span-2">
           <Card className="dark:bg-gray-800 dark:border-gray-700">
             <CardHeader>
-              <CardTitle className="dark:text-white">Post Performance</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="dark:text-white">Post Performance</CardTitle>
+                {filteredAnalytics.length > 0 && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setPostSort('recent');
+                        setShowAllPosts(false);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        postSort === 'recent'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 dark:bg-[#1f1b2e] text-gray-700 dark:text-[#a39bba] hover:bg-gray-200 dark:hover:bg-[#28243a]'
+                      }`}
+                    >
+                      <Clock className="w-4 h-4" />
+                      Recent
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPostSort('best');
+                        setShowAllPosts(false);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        postSort === 'best'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 dark:bg-[#1f1b2e] text-gray-700 dark:text-[#a39bba] hover:bg-gray-200 dark:hover:bg-[#28243a]'
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      Best
+                    </button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {filteredAnalytics.length === 0 ? (
@@ -421,39 +458,82 @@ export function AnalyticsView() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredAnalytics.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 border border-gray-200 dark:border-[#2a2538] rounded-lg hover:bg-gray-50 dark:hover:bg-[#28243a] transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded capitalize">
-                          {item.platform}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(item.collected_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-4 gap-4 text-center">
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">Likes</p>
-                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.likes}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">Comments</p>
-                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.comments}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">Shares</p>
-                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.shares}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">Views</p>
-                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.impressions || 0}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  {(() => {
+                    const sortedPosts = [...filteredAnalytics].sort((a, b) => {
+                      if (postSort === 'recent') {
+                        return new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime();
+                      } else {
+                        const engagementA = a.engagement_rate || 0;
+                        const engagementB = b.engagement_rate || 0;
+                        return engagementB - engagementA;
+                      }
+                    });
+
+                    const displayedPosts = showAllPosts ? sortedPosts : sortedPosts.slice(0, 5);
+
+                    return (
+                      <>
+                        {displayedPosts.map((item, index) => (
+                          <div
+                            key={item.id}
+                            className="p-4 border border-gray-200 dark:border-[#2a2538] rounded-lg hover:bg-gray-50 dark:hover:bg-[#28243a] transition-colors"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                {postSort === 'best' && index < 3 && (
+                                  <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold rounded">
+                                    <Flame className="w-3 h-3" />
+                                    #{index + 1}
+                                  </span>
+                                )}
+                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded capitalize">
+                                  {item.platform}
+                                </span>
+                                {item.engagement_rate && (
+                                  <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium rounded">
+                                    {item.engagement_rate.toFixed(1)}% engagement
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-sm text-gray-500 dark:text-gray-400">
+                                {new Date(item.collected_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-4 gap-4 text-center">
+                              <div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Likes</p>
+                                <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.likes}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Comments</p>
+                                <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.comments}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Shares</p>
+                                <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.shares}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">Views</p>
+                                <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.impressions || 0}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {sortedPosts.length > 5 && (
+                          <div className="flex justify-center pt-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowAllPosts(!showAllPosts)}
+                              className="dark:border-[#2a2538] dark:text-[#a39bba] dark:hover:bg-[#28243a]"
+                            >
+                              {showAllPosts ? 'Show Less' : `Show More (${sortedPosts.length - 5} more)`}
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </CardContent>
