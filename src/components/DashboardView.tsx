@@ -169,10 +169,10 @@ export function DashboardView() {
           likes: Math.floor(Math.random() * 500) + 50,
           comments: Math.floor(Math.random() * 100) + 10,
           shares: Math.floor(Math.random() * 50) + 5,
-          views: Math.floor(Math.random() * 2000) + 500,
+          impressions: Math.floor(Math.random() * 2000) + 500,
+          clicks: Math.floor(Math.random() * 100) + 20,
           engagement_rate: parseFloat((Math.random() * 10 + 2).toFixed(2)),
           collected_at: date.toISOString(),
-          recorded_at: date.toISOString(),
         });
       }
 

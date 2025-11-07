@@ -57,10 +57,10 @@ export function AnalyticsView() {
           likes: Math.floor(Math.random() * 500) + 50,
           comments: Math.floor(Math.random() * 100) + 10,
           shares: Math.floor(Math.random() * 50) + 5,
-          views: Math.floor(Math.random() * 2000) + 500,
+          impressions: Math.floor(Math.random() * 2000) + 500,
+          clicks: Math.floor(Math.random() * 100) + 20,
           engagement_rate: parseFloat((Math.random() * 10 + 2).toFixed(2)),
           collected_at: date.toISOString(),
-          recorded_at: date.toISOString(),
         });
       }
 
@@ -91,10 +91,10 @@ export function AnalyticsView() {
 
   const totalMetrics = filteredAnalytics.reduce(
     (acc, curr) => ({
-      likes: acc.likes + curr.likes,
-      comments: acc.comments + curr.comments,
-      shares: acc.shares + curr.shares,
-      views: acc.views + curr.views,
+      likes: acc.likes + (curr.likes || 0),
+      comments: acc.comments + (curr.comments || 0),
+      shares: acc.shares + (curr.shares || 0),
+      views: acc.views + (curr.impressions || 0),
     }),
     { likes: 0, comments: 0, shares: 0, views: 0 }
   );
@@ -282,7 +282,7 @@ export function AnalyticsView() {
                           {item.platform}
                         </span>
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(item.recorded_at || item.collected_at).toLocaleDateString()}
+                          {new Date(item.collected_at).toLocaleDateString()}
                         </span>
                       </div>
                       <div className="grid grid-cols-4 gap-4 text-center">
@@ -300,7 +300,7 @@ export function AnalyticsView() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-600 dark:text-gray-400">Views</p>
-                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.views}</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.impressions || 0}</p>
                         </div>
                       </div>
                     </div>
