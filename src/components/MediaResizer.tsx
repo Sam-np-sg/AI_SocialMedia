@@ -81,7 +81,7 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
     setProcessing(true);
 
     try {
-      console.log('File type:', selectedFile.type, 'Size:', selectedFile.size);
+      console.log('File type:', selectedFile.type, 'Size:', selectedFile.size, 'Name:', selectedFile.name);
       let resizeResult: ResizeResult;
 
       if (selectedFile.type.startsWith('image/')) {
@@ -104,6 +104,14 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
       }
 
       console.log('Setting result in state...');
+      console.log('Result details:', {
+        hasUrl: !!resizeResult.url,
+        urlLength: resizeResult.url.length,
+        urlStart: resizeResult.url.substring(0, 100),
+        width: resizeResult.width,
+        height: resizeResult.height,
+        size: resizeResult.size
+      });
       setResult(resizeResult);
       console.log('Result set successfully');
 
@@ -120,14 +128,33 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
   };
 
   const handleDownload = () => {
-    if (!result) return;
+    if (!result || !selectedFile) return;
+
+    // Get the file extension from the original file
+    const originalExt = selectedFile.name.split('.').pop() || 'jpg';
+    const fileExt = isVideo ? originalExt : (originalExt.match(/jpe?g|png|webp|gif/i) ? originalExt : 'jpg');
 
     const link = document.createElement('a');
-    link.href = result.url;
-    link.download = `resized-${selectedMediaType}-${Date.now()}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    // For data URLs, we can download directly
+    // For videos, we should download the original since we can't re-encode in browser
+    if (isVideo && selectedFile) {
+      // Download original video file (since browser can't re-encode)
+      const videoUrl = URL.createObjectURL(selectedFile);
+      link.href = videoUrl;
+      link.download = `resized-${selectedMediaType}-${Date.now()}.${fileExt}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(videoUrl);
+    } else {
+      // Download resized image
+      link.href = result.url;
+      link.download = `resized-${selectedMediaType}-${Date.now()}.${fileExt}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const handleReset = () => {
@@ -309,13 +336,17 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                         src={result.url}
                         alt={isVideo ? "Video Thumbnail" : "Resized"}
                         className="w-full h-48 object-contain"
-                        onLoad={() => {
+                        onLoad={(e) => {
+                          const img = e.target as HTMLImageElement;
                           console.log(isVideo ? '✅ Video thumbnail loaded!' : '✅ Resized image loaded!');
+                          console.log('Image dimensions:', img.naturalWidth, 'x', img.naturalHeight);
                         }}
                         onError={(e) => {
                           console.error('❌ Failed to load resized media');
-                          console.log('Result URL:', result.url);
+                          console.log('Result URL type:', result.url.substring(0, 30));
+                          console.log('Result URL length:', result.url.length);
                           console.log('Blob size:', result.size);
+                          console.log('Is data URL:', result.url.startsWith('data:'));
                         }}
                       />
                     </div>
