@@ -3,11 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TrendingUp } from 'lucide-react';
 
 interface PerformanceGraphProps {
-  data: any[];
+  data?: any[];
   type?: 'line' | 'area';
 }
 
-export function PerformanceGraph({ data, type = 'area' }: PerformanceGraphProps) {
+export function PerformanceGraph({ data = [], type = 'area' }: PerformanceGraphProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+        <div className="text-center">
+          <TrendingUp className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+          <p>No performance data available</p>
+          <p className="text-sm mt-1">Publish posts to see performance trends</p>
+        </div>
+      </div>
+    );
+  }
+
   const chartData = data.map(item => ({
     date: new Date(item.collected_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     likes: item.likes || 0,
@@ -33,38 +45,9 @@ export function PerformanceGraph({ data, type = 'area' }: PerformanceGraphProps)
     return null;
   };
 
-  if (!data || data.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Performance Over Time
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-64 text-gray-500">
-            <div className="text-center">
-              <TrendingUp className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p>No data available for the graph</p>
-              <p className="text-sm mt-1">Publish posts to see performance trends</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5" />
-          Performance Over Time
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={350}>
+    <div>
+      <ResponsiveContainer width="100%" height={350}>
           {type === 'area' ? (
             <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <defs>
@@ -189,7 +172,6 @@ export function PerformanceGraph({ data, type = 'area' }: PerformanceGraphProps)
             </LineChart>
           )}
         </ResponsiveContainer>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

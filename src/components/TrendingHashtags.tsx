@@ -123,16 +123,16 @@ export function TrendingHashtags({ platform = 'all' }: TrendingHashtagsProps) {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="dark:bg-gray-800 dark:border-gray-700">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 dark:text-white">
             <Flame className="w-5 h-5 text-orange-500" />
             Trending Hashtags
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-[#7b6cff]" />
           </div>
         </CardContent>
       </Card>
@@ -140,10 +140,10 @@ export function TrendingHashtags({ platform = 'all' }: TrendingHashtagsProps) {
   }
 
   return (
-    <Card>
+    <Card className="dark:bg-gray-800 dark:border-gray-700">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 dark:text-white">
             <Flame className="w-5 h-5 text-orange-500" />
             Trending Hashtags
           </CardTitle>
@@ -164,9 +164,9 @@ export function TrendingHashtags({ platform = 'all' }: TrendingHashtagsProps) {
       <CardContent>
         {hashtags.length === 0 ? (
           <div className="text-center py-8">
-            <Flame className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-600 mb-4">No trending hashtags available</p>
-            <Button onClick={generateDemoHashtags} disabled={refreshing}>
+            <Flame className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-600 dark:text-gray-400 mb-4">No trending hashtags available</p>
+            <Button onClick={generateDemoHashtags} disabled={refreshing} className="dark:bg-[#7b6cff] dark:hover:bg-[#6b5cef] dark:text-white">
               {refreshing ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -183,32 +183,32 @@ export function TrendingHashtags({ platform = 'all' }: TrendingHashtagsProps) {
               <button
                 key={hashtag.id}
                 onClick={() => handleHashtagClick(hashtag.trending_url, hashtag.hashtag)}
-                className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group cursor-pointer"
+                className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-[#2a2538] hover:border-blue-300 dark:hover:border-[#3a3456] hover:bg-blue-50 dark:hover:bg-[#28243a] transition-all group cursor-pointer"
               >
                 <div className="flex items-center gap-3 flex-1 text-left">
-                  <span className="text-sm font-bold text-gray-400 w-6">
+                  <span className="text-sm font-bold text-gray-400 dark:text-gray-500 w-6">
                     #{index + 1}
                   </span>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-sm text-gray-900 group-hover:text-blue-600 transition-colors">
+                      <h4 className="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-[#b8aaff] transition-colors">
                         #{hashtag.hashtag}
                       </h4>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${getPlatformColor(hashtag.platform)}`}>
                         {hashtag.platform}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {hashtag.posts_count.toLocaleString()} posts
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 text-orange-600 text-xs font-medium">
+                  <div className="flex items-center gap-1 text-orange-600 dark:text-orange-400 text-xs font-medium">
                     <TrendingUp className="w-3 h-3" />
                     +{hashtag.growth_rate}%
                   </div>
-                  <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                  <ExternalLink className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-[#b8aaff] transition-colors" />
                 </div>
               </button>
             ))}
