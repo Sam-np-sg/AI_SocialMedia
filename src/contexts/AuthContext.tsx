@@ -20,7 +20,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('AuthContext: Initializing...');
+    console.log('Current URL:', window.location.href);
+    console.log('Has hash params:', window.location.hash.length > 0);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email || 'No session');
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -33,14 +38,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       (async () => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('=== Auth state changed ===');
+        console.log('Event:', event);
+        console.log('User:', session?.user?.email || 'No user');
+        console.log('Session valid:', !!session);
+
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
 
         if (event === 'SIGNED_IN' && session) {
+          console.log('User signed in successfully!');
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           if (hashParams.has('access_token')) {
+            console.log('Cleaning OAuth hash from URL');
             window.history.replaceState({}, document.title, window.location.pathname);
           }
         }

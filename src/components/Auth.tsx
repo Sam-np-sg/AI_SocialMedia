@@ -153,7 +153,6 @@ export function Auth() {
             variant="outline"
             className="w-full"
             onClick={async () => {
-              setLoading(true);
               setError('');
               try {
                 fetch('https://danieljohnsgp.app.n8n.cloud/webhook-test/google-signup', {
@@ -167,11 +166,16 @@ export function Auth() {
                   }),
                 }).catch((err) => console.error('Webhook error:', err));
 
+                console.log('Initiating Google OAuth...');
                 const { error } = await signInWithGoogle();
-                if (error) throw error;
+                if (error) {
+                  console.error('Google OAuth error:', error);
+                  throw error;
+                }
+                console.log('Google OAuth redirect initiated successfully');
               } catch (err: any) {
+                console.error('Google sign-in error:', err);
                 setError(err.message || 'Failed to sign in with Google');
-                setLoading(false);
               }
             }}
             disabled={loading}
