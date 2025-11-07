@@ -43,6 +43,7 @@ export function DashboardView() {
   useEffect(() => {
     if (user) {
       loadDashboardData();
+      window.dispatchEvent(new Event('refreshNotifications'));
     }
   }, [user]);
 
@@ -67,7 +68,7 @@ export function DashboardView() {
           .select('*')
           .eq('user_id', user!.id)
           .order('posted_at', { ascending: false })
-          .limit(10),
+          .limit(5),
         supabase
           .from('content_posts')
           .select('*')
@@ -198,7 +199,7 @@ export function DashboardView() {
                     return (
                       <div
                         key={post.id}
-                        className="p-5 border-2 border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-lg transition-all duration-300 bg-white dark:bg-gray-800"
+                        className="p-5 border border-gray-200 dark:border-[#2a2538] rounded-xl hover:border-primary-300 dark:hover:border-[#3a3456] transition-all duration-300 bg-white dark:bg-[#1f1b2e]"
                       >
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex items-center gap-2">
@@ -214,13 +215,13 @@ export function DashboardView() {
                           </div>
                           <button
                             onClick={() => handleCopyContent(post.content, post.id)}
-                            className="p-1.5 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded transition-colors relative group"
+                            className="p-1.5 hover:bg-primary-50 dark:hover:bg-[#28243a] rounded transition-colors relative group"
                             title={copiedId === post.id ? 'Copied!' : 'Copy'}
                           >
                             <Copy className={`w-4 h-4 transition-colors ${
                               copiedId === post.id
                                 ? 'text-success'
-                                : 'text-gray-500 dark:text-gray-400 group-hover:text-primary-600'
+                                : 'text-gray-500 dark:text-[#8a7fa3] group-hover:text-primary-600 dark:group-hover:text-[#b8aaff]'
                             }`} />
                             {copiedId === post.id && (
                               <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
@@ -240,7 +241,7 @@ export function DashboardView() {
                           </div>
                         )}
 
-                        <p className="text-sm text-gray-900 dark:text-gray-200 leading-relaxed mb-3">{post.content}</p>
+                        <p className="text-sm text-gray-900 dark:text-[#b8aaff] leading-relaxed mb-3">{post.content}</p>
 
                         <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                           <span className="flex items-center gap-1">
@@ -255,17 +256,6 @@ export function DashboardView() {
                             </span>
                           )}
                         </div>
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                        {post.status === 'draft' && (
-                          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white text-xs font-medium rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all duration-300 hover:shadow-md">
-                            <Send className="w-3 h-3" />
-                            Publish Now
-                          </button>
-                        )}
-                      </div>
                       </div>
                     );
                   })}

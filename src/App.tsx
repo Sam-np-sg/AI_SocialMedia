@@ -146,7 +146,7 @@ function AppContent() {
       <main className="flex-1 overflow-auto bg-[#F9FAFB] dark:bg-gray-900">
         <div className="animate-fadeInUp">
           {currentView === 'dashboard' && <DashboardView />}
-          {currentView === 'ai-creator' && <AICreator />}
+          {currentView === 'ai-creator' && <AICreator onNavigateToWorkspace={() => setCurrentView('scheduler')} />}
           {currentView === 'scheduler' && <SchedulerView />}
           {currentView === 'analytics' && <AnalyticsView />}
           {currentView === 'media-resizer' && <MediaResizerView />}
