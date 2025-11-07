@@ -54,17 +54,26 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
       if (response.ok) {
         const data = await response.json();
         console.log('Full response data from n8n:', data);
+        console.log('Response data type:', typeof data);
+        console.log('Response data keys:', Object.keys(data || {}));
 
         // Handle different possible response structures
         let contentIdea = '';
         let caption = '';
 
+        // If response is a string directly, use it as caption
+        if (typeof data === 'string') {
+          contentIdea = `Create engaging visual content about: ${prompt}`;
+          caption = data;
+        }
+        // If response has message field (common n8n format)
+        else if (data.message) {
+          contentIdea = `Create engaging visual content about: ${prompt}`;
+          caption = typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
+        }
         // Check if response has an 'output' field with combined text
-        if (data.output && typeof data.output === 'string') {
-          // Parse the output string to extract contentIdea and caption
+        else if (data.output && typeof data.output === 'string') {
           const outputText = data.output;
-
-          // Look for patterns like "Idea:" or "Content Idea:" followed by "Caption:"
           const ideaMatch = outputText.match(/(?:Content\s+)?Idea:\s*([^\n]+(?:\n(?!Caption:)[^\n]+)*)/i);
           const captionMatch = outputText.match(/Caption:\s*([\s\S]+)/i);
 
@@ -72,39 +81,46 @@ export function AICreator({ onNavigateToWorkspace }: AICreatorProps) {
             contentIdea = ideaMatch[1].trim();
             caption = captionMatch[1].trim();
           } else {
-            // If no clear pattern, try to split on common delimiters
             const parts = outputText.split(/\n\n+/);
             if (parts.length >= 2) {
               contentIdea = parts[0].replace(/^(?:Content\s+)?Idea:\s*/i, '').trim();
               caption = parts.slice(1).join('\n\n').replace(/^Caption:\s*/i, '').trim();
             } else {
-              // If still can't parse, use the whole output as caption
               contentIdea = `Create engaging visual content about: ${prompt}`;
               caption = outputText;
             }
           }
         }
-
-        // Check for various possible field names (fallback)
-        if (!contentIdea && (data.contentIdea || data.content_idea || data.idea)) {
+        // Check for text field
+        else if (data.text) {
+          contentIdea = `Create engaging visual content about: ${prompt}`;
+          caption = data.text;
+        }
+        // Check for response field (another common n8n format)
+        else if (data.response) {
+          contentIdea = `Create engaging visual content about: ${prompt}`;
+          caption = typeof data.response === 'string' ? data.response : JSON.stringify(data.response);
+        }
+        // Check for various possible field names
+        else if (data.contentIdea || data.content_idea || data.idea) {
           contentIdea = data.contentIdea || data.content_idea || data.idea;
+          caption = data.caption || data.text || data.content || '';
         }
-
-        if (!caption && (data.caption || data.text || data.content)) {
-          caption = data.caption || data.text || data.content;
+        // If response has nested result structure
+        else if (data.result) {
+          contentIdea = data.result.contentIdea || data.result.content_idea || data.result.idea || `Create engaging visual content about: ${prompt}`;
+          caption = data.result.caption || data.result.text || data.result.content || data.result.message || '';
         }
-
-        // If response has nested structure
-        if (data.result) {
-          contentIdea = data.result.contentIdea || data.result.content_idea || data.result.idea || contentIdea;
-          caption = data.result.caption || data.result.text || data.result.content || caption;
-        }
-
         // If response is an array, take the first element
-        if (Array.isArray(data) && data.length > 0) {
+        else if (Array.isArray(data) && data.length > 0) {
           const firstItem = data[0];
-          contentIdea = firstItem.contentIdea || firstItem.content_idea || firstItem.idea || contentIdea;
-          caption = firstItem.caption || firstItem.text || firstItem.content || caption;
+          if (typeof firstItem === 'string') {
+            contentIdea = `Create engaging visual content about: ${prompt}`;
+            caption = firstItem;
+          } else {
+            contentIdea = firstItem.contentIdea || firstItem.content_idea || firstItem.idea || `Create engaging visual content about: ${prompt}`;
+            caption = firstItem.caption || firstItem.text || firstItem.content || firstItem.message || '';
+          }
         }
 
         if (contentIdea && caption) {
