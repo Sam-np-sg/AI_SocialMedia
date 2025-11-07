@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
 import { PerformanceGraph } from './PerformanceGraph';
 import { TrendingHashtags } from './TrendingHashtags';
-import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, Flame } from 'lucide-react';
+import { TrendingUp, Heart, MessageCircle, Share2, Eye, Loader2, Twitter, Linkedin, Instagram, Facebook, Flame, RefreshCw } from 'lucide-react';
 
 type Platform = 'all' | 'twitter' | 'linkedin' | 'instagram' | 'facebook';
 
@@ -13,6 +14,7 @@ export function AnalyticsView() {
   const [loading, setLoading] = useState(true);
   const [analytics, setAnalytics] = useState<any[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>('all');
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -27,7 +29,7 @@ export function AnalyticsView() {
         .select('*')
         .eq('user_id', user!.id)
         .order('collected_at', { ascending: false })
-        .limit(10);
+        .limit(30);
 
       if (error) throw error;
       setAnalytics(data || []);
@@ -35,6 +37,44 @@ export function AnalyticsView() {
       console.error('Error loading analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateDemoData = async () => {
+    setGenerating(true);
+    try {
+      const platforms = ['twitter', 'linkedin', 'instagram', 'facebook'];
+      const demoData = [];
+
+      for (let i = 0; i < 30; i++) {
+        const platform = platforms[Math.floor(Math.random() * platforms.length)];
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+
+        demoData.push({
+          user_id: user!.id,
+          platform,
+          likes: Math.floor(Math.random() * 500) + 50,
+          comments: Math.floor(Math.random() * 100) + 10,
+          shares: Math.floor(Math.random() * 50) + 5,
+          views: Math.floor(Math.random() * 2000) + 500,
+          engagement_rate: parseFloat((Math.random() * 10 + 2).toFixed(2)),
+          collected_at: date.toISOString(),
+          recorded_at: date.toISOString(),
+        });
+      }
+
+      await supabase.from('analytics').delete().eq('user_id', user!.id);
+
+      const { error } = await supabase.from('analytics').insert(demoData);
+
+      if (error) throw error;
+
+      await loadAnalytics();
+    } catch (error) {
+      console.error('Error generating demo data:', error);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -70,9 +110,28 @@ export function AnalyticsView() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-        <p className="text-gray-600 mt-1">Track your social media performance</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Track your social media performance</p>
+        </div>
+        <Button
+          onClick={generateDemoData}
+          disabled={generating}
+          className="dark:bg-[#7b6cff] dark:hover:bg-[#6b5cef]"
+        >
+          {generating ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Generate Demo Data
+            </>
+          )}
+        </Button>
       </div>
 
       <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
@@ -168,7 +227,7 @@ export function AnalyticsView() {
             <CardTitle className="dark:text-white">Performance Trends</CardTitle>
           </CardHeader>
           <CardContent>
-            <PerformanceGraph />
+            <PerformanceGraph data={analytics} />
           </CardContent>
         </Card>
       </div>
@@ -182,45 +241,59 @@ export function AnalyticsView() {
             <CardContent>
               {filteredAnalytics.length === 0 ? (
                 <div className="text-center py-12">
-                  <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No analytics yet</h3>
-                  <p className="text-gray-600">
+                  <TrendingUp className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No analytics yet</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
                     {selectedPlatform === 'all'
                       ? 'Publish posts to start tracking your performance'
                       : `No data available for ${platforms.find(p => p.id === selectedPlatform)?.name}`}
                   </p>
+                  <Button
+                    onClick={generateDemoData}
+                    disabled={generating}
+                    className="dark:bg-[#7b6cff] dark:hover:bg-[#6b5cef]"
+                  >
+                    {generating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      'Generate Demo Data'
+                    )}
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {filteredAnalytics.map((item) => (
                     <div
                       key={item.id}
-                      className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                      className="p-4 border border-gray-200 dark:border-[#2a2538] rounded-lg hover:bg-gray-50 dark:hover:bg-[#28243a] transition-colors"
                     >
                       <div className="flex items-center justify-between mb-3">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded capitalize">
+                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium rounded capitalize">
                           {item.platform}
                         </span>
-                        <span className="text-sm text-gray-500">
-                          {new Date(item.recorded_at).toLocaleDateString()}
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(item.recorded_at || item.collected_at).toLocaleDateString()}
                         </span>
                       </div>
                       <div className="grid grid-cols-4 gap-4 text-center">
                         <div>
-                          <p className="text-xs text-gray-600">Likes</p>
-                          <p className="text-lg font-semibold text-gray-900">{item.likes}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">Likes</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.likes}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-600">Comments</p>
-                          <p className="text-lg font-semibold text-gray-900">{item.comments}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">Comments</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.comments}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-600">Shares</p>
-                          <p className="text-lg font-semibold text-gray-900">{item.shares}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">Shares</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.shares}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-600">Views</p>
-                          <p className="text-lg font-semibold text-gray-900">{item.views}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">Views</p>
+                          <p className="text-lg font-semibold text-gray-900 dark:text-white">{item.views}</p>
                         </div>
                       </div>
                     </div>

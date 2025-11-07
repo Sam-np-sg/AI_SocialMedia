@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchUserPosts } from '../services/socialMediaAPI';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
 import { PerformanceGraph } from './PerformanceGraph';
 import { TrendingHashtags } from './TrendingHashtags';
 import {
@@ -20,7 +21,8 @@ import {
   Send,
   Edit,
   Trash2,
-  Copy
+  Copy,
+  RefreshCw
 } from 'lucide-react';
 
 interface Stats {
@@ -41,6 +43,8 @@ export function DashboardView() {
   const [loading, setLoading] = useState(true);
   const [recentPosts, setRecentPosts] = useState<any[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<any[]>([]);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -76,7 +80,7 @@ export function DashboardView() {
     try {
       await fetchUserPosts(user!.id);
 
-      const [socialPostsData, postsData, accountsData, analyticsData] = await Promise.all([
+      const [socialPostsData, postsData, accountsData, analyticsData, fullAnalyticsData] = await Promise.all([
         supabase
           .from('social_posts')
           .select('*')
@@ -97,6 +101,12 @@ export function DashboardView() {
           .from('analytics')
           .select('engagement_rate')
           .eq('user_id', user!.id),
+        supabase
+          .from('analytics')
+          .select('*')
+          .eq('user_id', user!.id)
+          .order('collected_at', { ascending: false })
+          .limit(30),
       ]);
 
       const scheduledCount = postsData.data?.filter(
@@ -134,10 +144,49 @@ export function DashboardView() {
       const allRecentPosts = [...draftPosts, ...(socialPostsData.data || [])].slice(0, 5);
 
       setRecentPosts(allRecentPosts);
+      setAnalytics(fullAnalyticsData.data || []);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateDemoData = async () => {
+    setGenerating(true);
+    try {
+      const platforms = ['twitter', 'linkedin', 'instagram', 'facebook'];
+      const demoData = [];
+
+      for (let i = 0; i < 30; i++) {
+        const platform = platforms[Math.floor(Math.random() * platforms.length)];
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+
+        demoData.push({
+          user_id: user!.id,
+          platform,
+          likes: Math.floor(Math.random() * 500) + 50,
+          comments: Math.floor(Math.random() * 100) + 10,
+          shares: Math.floor(Math.random() * 50) + 5,
+          views: Math.floor(Math.random() * 2000) + 500,
+          engagement_rate: parseFloat((Math.random() * 10 + 2).toFixed(2)),
+          collected_at: date.toISOString(),
+          recorded_at: date.toISOString(),
+        });
+      }
+
+      await supabase.from('analytics').delete().eq('user_id', user!.id);
+
+      const { error } = await supabase.from('analytics').insert(demoData);
+
+      if (error) throw error;
+
+      await loadDashboardData();
+    } catch (error) {
+      console.error('Error generating demo data:', error);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -178,9 +227,28 @@ export function DashboardView() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back! Here's your overview</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Welcome back! Here's your overview</p>
+        </div>
+        <Button
+          onClick={generateDemoData}
+          disabled={generating}
+          className="dark:bg-[#7b6cff] dark:hover:bg-[#6b5cef]"
+        >
+          {generating ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Generate Demo Data
+            </>
+          )}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -210,7 +278,7 @@ export function DashboardView() {
             <CardTitle className="dark:text-white">Performance Overview</CardTitle>
           </CardHeader>
           <CardContent>
-            <PerformanceGraph />
+            <PerformanceGraph data={analytics} />
           </CardContent>
         </Card>
       </div>
