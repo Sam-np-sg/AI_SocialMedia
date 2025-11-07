@@ -61,10 +61,13 @@ export interface ResizeResult {
   originalSize: number;
 }
 
+export type CropPosition = 'center' | 'top' | 'bottom' | 'left' | 'right';
+
 export const resizeImage = async (
   file: File,
   mediaType: MediaType,
-  quality: number = 0.92
+  quality: number = 0.92,
+  cropPosition: CropPosition = 'center'
 ): Promise<ResizeResult> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -92,10 +95,30 @@ export const resizeImage = async (
 
         if (sourceAspect > targetAspect) {
           sourceWidth = sourceHeight * targetAspect;
-          sourceX = (img.width - sourceWidth) / 2;
+          switch (cropPosition) {
+            case 'left':
+              sourceX = 0;
+              break;
+            case 'right':
+              sourceX = img.width - sourceWidth;
+              break;
+            case 'center':
+            default:
+              sourceX = (img.width - sourceWidth) / 2;
+          }
         } else {
           sourceHeight = sourceWidth / targetAspect;
-          sourceY = (img.height - sourceHeight) / 2;
+          switch (cropPosition) {
+            case 'top':
+              sourceY = 0;
+              break;
+            case 'bottom':
+              sourceY = img.height - sourceHeight;
+              break;
+            case 'center':
+            default:
+              sourceY = (img.height - sourceHeight) / 2;
+          }
         }
 
         canvas.width = specs.width;

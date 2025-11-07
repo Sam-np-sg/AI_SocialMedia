@@ -12,6 +12,7 @@ import {
   getMediaTypeLabel,
   detectMediaType,
   ResizeResult,
+  CropPosition,
 } from '../utils/mediaResizer';
 
 interface MediaResizerProps {
@@ -22,6 +23,7 @@ interface MediaResizerProps {
 export function MediaResizer({ platform = 'instagram', onMediaProcessed }: MediaResizerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType>('instagram-post');
+  const [cropPosition, setCropPosition] = useState<CropPosition>('center');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ResizeResult | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -83,7 +85,7 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
 
       if (selectedFile.type.startsWith('image/')) {
         console.log('Processing as image...');
-        resizeResult = await resizeImage(selectedFile, selectedMediaType);
+        resizeResult = await resizeImage(selectedFile, selectedMediaType, 0.92, cropPosition);
         console.log('Resize complete, result:', {
           size: resizeResult.size,
           width: resizeResult.width,
@@ -201,6 +203,25 @@ export function MediaResizer({ platform = 'instagram', onMediaProcessed }: Media
                     }`}
                   >
                     {getMediaTypeLabel(type)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-2 block">Crop Position</Label>
+              <div className="grid grid-cols-5 gap-2">
+                {(['center', 'top', 'bottom', 'left', 'right'] as CropPosition[]).map((position) => (
+                  <button
+                    key={position}
+                    onClick={() => setCropPosition(position)}
+                    className={`p-3 rounded-lg border-2 text-sm font-medium capitalize transition-all ${
+                      cropPosition === position
+                        ? 'border-green-600 bg-green-50 text-green-700'
+                        : 'border-gray-200 hover:border-green-300 text-gray-700'
+                    }`}
+                  >
+                    {position}
                   </button>
                 ))}
               </div>
